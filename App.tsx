@@ -16,6 +16,8 @@ import Otp from './src/screens/Auth/OTP'
 
 // Pages
 import Home from './src/screens/Home/Index'
+import Profile from './src/screens/Profile/Index'
+import Pickup from './src/screens/Pickup/Index'
 
 const Stack = createNativeStackNavigator();
 
@@ -55,6 +57,8 @@ const App = () => {
             <Stack.Screen name="Login" component={Login} />
             <Stack.Screen name="Otp" component={Otp} />
             <Stack.Screen name="Home" component={Home} />
+            <Stack.Screen name="Profile" component={Profile} />
+            <Stack.Screen name="Pickup" component={Pickup} />
           </>
         )}
       </Stack.Navigator>
