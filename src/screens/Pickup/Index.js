@@ -1,15 +1,51 @@
 import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, TouchableHighlight, FlatList, TextInput } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { useNavigation, useIsFocused } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Feather from 'react-native-vector-icons/Feather';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Fontisto from 'react-native-vector-icons/Fontisto';
+import { base_url } from '../../../App';
 
 const Index = (props) => {
 
   const navigation = useNavigation();
   const isFocused = useIsFocused();
+  const [isLoading, setIsLoading] = useState(false);
+  const [allPickups, setAllPickups] = useState([]);
+
+  const fetchPickups = async () => {
+    const access_token = await AsyncStorage.getItem('storeAccesstoken');
+    setIsLoading(true);
+    try {
+      const response = await fetch(base_url + 'api/rider/get-assign-orders', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setIsLoading(false);
+        console.log('Pickups fetched successfully', data);
+        setAllPickups(data);
+      } else {
+        // Handle error response
+        setIsLoading(false);
+        console.log('Failed to fetch pickups', data);
+      }
+    } catch (error) {
+      setIsLoading(false);
+      console.log('Error', error);
+    }
+  };
+
+  useEffect(() => {
+    if (isFocused) {
+      fetchPickups();
+    }
+  }, [isFocused]);
 
   return (
     <SafeAreaView style={{ flex: 1, flexDirection: 'column' }}>
@@ -19,82 +55,63 @@ const Index = (props) => {
           <Text style={styles.headerTitle}>Pickup</Text>
         </TouchableOpacity>
       </View>
-      <View style={styles.container}>
-        <View style={styles.cardView}>
-          {/* Flower Name */}
-          <View style={styles.row}>
-            <Text style={styles.label}>🌸 Flower Name:</Text>
-            <Text style={styles.value}>Rose</Text>
-          </View>
-          {/* Quantity */}
-          <View style={styles.row}>
-            <Text style={styles.label}>📦 Quantity:</Text>
-            <Text style={styles.value}>20 pieces</Text>
-          </View>
-          {/* Vendor Name */}
-          <View style={styles.row}>
-            <Text style={styles.label}>🏪 Vendor Name:</Text>
-            <Text style={styles.value}>Flower Shop</Text>
-          </View>
-          {/* Pickup Location */}
-          <View style={styles.row}>
-            <Text style={styles.label}>📍 Pickup Location:</Text>
-            <Text style={styles.value}>123 Flower St.</Text>
-          </View>
-          {/* Total Price */}
-          <View style={[styles.row, styles.inputRow]}>
-            <Text style={styles.label}>💰 Total Price:</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter total price"
-              keyboardType="numeric"
+      {!isLoading ?
+        <View style={styles.container}>
+          {allPickups.length > 0 ?
+            <FlatList
+              data={allPickups}
+              keyExtractor={item => item.id}
+              renderItem={({ item }) => (
+                <View style={styles.cardView}>
+                  {/* Flower Name */}
+                  <View style={styles.row}>
+                    <Text style={styles.label}>🌸 Flower Name:</Text>
+                    <Text style={styles.value}>Rose</Text>
+                  </View>
+                  {/* Quantity */}
+                  <View style={styles.row}>
+                    <Text style={styles.label}>📦 Quantity:</Text>
+                    <Text style={styles.value}>20 pieces</Text>
+                  </View>
+                  {/* Vendor Name */}
+                  <View style={styles.row}>
+                    <Text style={styles.label}>🏪 Vendor Name:</Text>
+                    <Text style={styles.value}>Flower Shop</Text>
+                  </View>
+                  {/* Pickup Location */}
+                  <View style={styles.row}>
+                    <Text style={styles.label}>📍 Pickup Location:</Text>
+                    <Text style={styles.value}>123 Flower St.</Text>
+                  </View>
+                  {/* Total Price */}
+                  <View style={[styles.row, styles.inputRow]}>
+                    <Text style={styles.label}>💰 Total Price:</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter total price"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  {/* Submit Button */}
+                  <View style={styles.buttonContainer}>
+                    <TouchableOpacity style={styles.submitButton}>
+                      <Text style={styles.submitButtonText}>Submit</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             />
-          </View>
-          {/* Submit Button */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.submitButton}>
-              <Text style={styles.submitButtonText}>Submit</Text>
-            </TouchableOpacity>
-          </View>
+            :
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+              <Text style={{ color: '#555', fontSize: 17 }}>No pickups available</Text>
+            </View>
+          }
         </View>
-        <View style={styles.cardView}>
-          {/* Flower Name */}
-          <View style={styles.row}>
-            <Text style={styles.label}>🌸 Flower Name:</Text>
-            <Text style={styles.value}>Rose</Text>
-          </View>
-          {/* Quantity */}
-          <View style={styles.row}>
-            <Text style={styles.label}>📦 Quantity:</Text>
-            <Text style={styles.value}>20 pieces</Text>
-          </View>
-          {/* Vendor Name */}
-          <View style={styles.row}>
-            <Text style={styles.label}>🏪 Vendor Name:</Text>
-            <Text style={styles.value}>Flower Shop</Text>
-          </View>
-          {/* Pickup Location */}
-          <View style={styles.row}>
-            <Text style={styles.label}>📍 Pickup Location:</Text>
-            <Text style={styles.value}>123 Flower St.</Text>
-          </View>
-          {/* Total Price */}
-          <View style={[styles.row, styles.inputRow]}>
-            <Text style={styles.label}>💰 Total Price:</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter total price"
-              keyboardType="numeric"
-            />
-          </View>
-          {/* Submit Button */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.submitButton}>
-              <Text style={styles.submitButtonText}>Submit</Text>
-            </TouchableOpacity>
-          </View>
+        :
+        <View style={{ flex: 1, alignSelf: 'center', top: '30%' }}>
+          <Text style={{ color: '#ffcb44', fontSize: 17 }}>Loading...</Text>
         </View>
-      </View>
+      }
       <View style={{ padding: 0, height: 58, borderRadius: 0, backgroundColor: '#fff', alignItems: 'center' }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', margin: 0 }}>
           <View style={{ padding: 0, width: '30%' }}>

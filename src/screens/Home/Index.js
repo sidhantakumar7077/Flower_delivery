@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, TouchableHighlight, FlatList, Animated } from 'react-native'
+import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, TouchableHighlight, FlatList, Animated, BackHandler, ToastAndroid } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 // import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -17,6 +17,27 @@ const Index = () => {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
   const [expandedRow, setExpandedRow] = useState(null);
+  const [backPressCount, setBackPressCount] = useState(0);
+
+  useEffect(() => {
+    const handleBackPress = () => {
+      if (backPressCount === 1) {
+        BackHandler.exitApp(); // Exit the app if back button is pressed twice within 2 seconds
+        return true;
+      }
+      ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
+      setBackPressCount(1);
+      const timeout = setTimeout(() => {
+        setBackPressCount(0);
+      }, 2000); // Reset back press count after 2 seconds
+      return true; // Prevent default behavior
+    };
+
+    if (isFocused) {
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+      return () => backHandler.remove(); // Cleanup the event listener when the component unmounts or navigates away
+    }
+  }, [backPressCount, isFocused]);
 
   const toggleExpandRow = (id) => {
     setExpandedRow(expandedRow === id ? null : id); // Toggle row expansion
@@ -86,7 +107,7 @@ const Index = () => {
             </View>
           </View>
           <View style={{ padding: 0, width: '30%' }}>
-            <TouchableHighlight onPressIn={()=> navigation.navigate('Pickup')} activeOpacity={0.6} underlayColor="#DDDDDD" style={{ backgroundColor: '#fff', padding: 10, flexDirection: 'column', alignItems: 'center' }}>
+            <TouchableHighlight onPressIn={() => navigation.navigate('Pickup')} activeOpacity={0.6} underlayColor="#DDDDDD" style={{ backgroundColor: '#fff', padding: 10, flexDirection: 'column', alignItems: 'center' }}>
               <View style={{ alignItems: 'center' }}>
                 <FontAwesome5 name="truck-pickup" color={'#000'} size={21} />
                 <Text style={{ color: '#000', fontSize: 11, fontWeight: '500', marginTop: 4, height: 17 }}>Pickup</Text>
@@ -94,7 +115,7 @@ const Index = () => {
             </TouchableHighlight>
           </View>
           <View style={{ padding: 0, width: '30%' }}>
-            <TouchableHighlight onPressIn={()=> navigation.navigate('Profile')} activeOpacity={0.6} underlayColor="#DDDDDD" style={{ backgroundColor: '#fff', padding: 10, flexDirection: 'column', alignItems: 'center' }}>
+            <TouchableHighlight onPressIn={() => navigation.navigate('Profile')} activeOpacity={0.6} underlayColor="#DDDDDD" style={{ backgroundColor: '#fff', padding: 10, flexDirection: 'column', alignItems: 'center' }}>
               <View style={{ alignItems: 'center', marginTop: 3 }}>
                 <Fontisto name="person" color={'#000'} size={20} />
                 <Text style={{ color: '#000', fontSize: 11, fontWeight: '500', marginTop: 4, height: 17 }}>Profile</Text>

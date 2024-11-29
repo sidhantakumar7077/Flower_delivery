@@ -2,6 +2,7 @@ import { StyleSheet, Text, View, StatusBar } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from "@react-native-community/netinfo";
 
 // SplashScreen
@@ -21,10 +22,25 @@ import Pickup from './src/screens/Pickup/Index'
 
 const Stack = createNativeStackNavigator();
 
+export const base_url = "https://pandit.33crores.com/";
+
 const App = () => {
 
   const [showSplash, setShowSplash] = useState(true);
   const [isConnected, setIsConnected] = useState(true);
+  const [access_token, setAccess_token] = useState('');
+
+  const getAccessToken = async () => {
+    try {
+      const value = await AsyncStorage.getItem('storeAccesstoken');
+      if (value !== null) {
+        setAccess_token(value);
+        console.log("access_token", value);
+      }
+    } catch (e) {
+      // error reading value
+    }
+  }
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
@@ -39,6 +55,7 @@ const App = () => {
   }, []);
 
   useEffect(() => {
+    getAccessToken();
     setTimeout(() => {
       setShowSplash(false);
     }, 5000)
@@ -53,10 +70,9 @@ const App = () => {
           <Stack.Screen name="NoInternet" component={NoInternet} />
         ) : (
           <>
-            {/* <Stack.Screen name="Home" component={Home} /> */}
-            <Stack.Screen name="Login" component={Login} />
+            {access_token ? <Stack.Screen name="Home" component={Home} /> : <Stack.Screen name="Login" component={Login} />}
+            {!access_token ? <Stack.Screen name="Home" component={Home} /> : <Stack.Screen name="Login" component={Login} />}
             <Stack.Screen name="Otp" component={Otp} />
-            <Stack.Screen name="Home" component={Home} />
             <Stack.Screen name="Profile" component={Profile} />
             <Stack.Screen name="Pickup" component={Pickup} />
           </>

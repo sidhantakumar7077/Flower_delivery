@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Image, ImageBackground, StyleSheet, TouchableOpacity, ActivityIndicator, PermissionsAndroid, Platform } from 'react-native';
 import { FloatingLabelInput } from 'react-native-floating-label-input';
 import { useNavigation } from '@react-navigation/native';
+import { base_url } from '../../../App';
 
 const Login = () => {
 
@@ -10,6 +11,57 @@ const Login = () => {
     const [errorMessage, setErrorMessage] = useState('');
     const [showError, setShowError] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+
+    const pressHandler = async () => {
+        setIsLoading(true);
+        // const strippedPhone = phone.replace(/^\+91/, '');
+        try {
+            const phoneRegex = /^\+91\d{10}$/;
+            if (phone === "" || !phoneRegex.test(phone)) {
+                setErrorMessage('Please enter a valid phone number');
+                setShowError(true);
+                setTimeout(() => {
+                    setShowError(false);
+                }, 5000);
+                setIsLoading(false);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('phone', phone);
+
+            const response = await fetch(base_url + 'api/rider/send-otp', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                console.log('OTP sent successfully', data);
+                let phone_orderId = {
+                    phone: phone,
+                    order_id: data.order_id
+                }
+                navigation.navigate('Otp', phone_orderId);
+            } else {
+                // Handle error response
+                setErrorMessage(data.message || 'Failed to send OTP. Please try again.');
+                setShowError(true);
+                setTimeout(() => {
+                    setShowError(false);
+                }, 5000);
+            }
+        } catch (error) {
+            setErrorMessage('Failed to send OTP. Please try again.');
+            setShowError(true);
+            console.log("Error", error);
+            setTimeout(() => {
+                setShowError(false);
+            }, 5000);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' }}>
@@ -42,7 +94,7 @@ const Login = () => {
                     {isLoading ? (
                         <ActivityIndicator size="large" color="#c80100" />
                     ) : (
-                        <TouchableOpacity onPress={() => navigation.navigate('Otp')} style={styles.button}>
+                        <TouchableOpacity onPress={pressHandler} style={styles.button}>
                             <Text style={styles.buttonText}>SUBMIT</Text>
                         </TouchableOpacity>
                     )}

@@ -3,6 +3,7 @@ import { View, Text, Image, ImageBackground, StyleSheet, TouchableOpacity, Activ
 import { FloatingLabelInput } from 'react-native-floating-label-input';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { base_url } from '../../../App';
 
 const OTP = (props) => {
 
@@ -12,11 +13,67 @@ const OTP = (props) => {
     const [showError, setShowError] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
+    useEffect(() => {
+        if (otp.length === 6) {
+            pressHandler();
+        }
+    }, [otp]);
+
+    const pressHandler = async () => {
+        setIsLoading(true);
+        try {
+            if (otp === "" || otp.length != 6) {
+                setErrorMessage('Please enter a valid OTP');
+                setShowError(true);
+                setTimeout(() => {
+                    setShowError(false);
+                }, 5000);
+                setIsLoading(false);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('orderId', props.route.params.order_id);
+            formData.append('otp', otp);
+            formData.append('phoneNumber', props.route.params.phone);
+
+            // console.log("formData", formData);
+            // return;
+
+            const response = await fetch(base_url + "api/rider/verify-otp", {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json();
+            if (response.ok) {
+                console.log('Login successfully', data);
+                await AsyncStorage.setItem('storeAccesstoken', data.token);
+                navigation.replace('Home');
+            } else {
+                // Handle error response
+                setErrorMessage(data.message || 'Failed to Login. Please try again.');
+                setShowError(true);
+                setTimeout(() => {
+                    setShowError(false);
+                }, 5000);
+            }
+        } catch (error) {
+            setErrorMessage('Failed to Login. Please try again.--');
+            setShowError(true);
+            console.log("Error-=-=", error);
+            setTimeout(() => {
+                setShowError(false);
+            }, 5000);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
     return (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' }}>
             <ImageBackground source={require('../../assets/images/Login_BG.png')} style={{ flex: 1, resizeMode: 'cover', justifyContent: 'center', alignItems: 'center', height: '100%', width: '100%' }}>
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
-                    <Image source={require('../../assets/images/whitelogo.png')} style={{ height: 130, width: 130, resizeMode: 'contain' }}/>
+                    <Image source={require('../../assets/images/whitelogo.png')} style={{ height: 130, width: 130, resizeMode: 'contain' }} />
                 </View>
                 <View style={styles.footer}>
                     {/* <Text style={{ fontSize: 18, fontFamily: 'okra', fontWeight: '600', color: '#353535', fontWeight: 'bold' }}>Enter OTP For Login</Text> */}
@@ -37,7 +94,7 @@ const OTP = (props) => {
                     {isLoading ? (
                         <ActivityIndicator size="large" color="#c80100" />
                     ) : (
-                        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Home')}>
+                        <TouchableOpacity style={styles.button} onPress={pressHandler}>
                             <Text style={styles.buttonText}>SUBMIT</Text>
                         </TouchableOpacity>
                     )}
