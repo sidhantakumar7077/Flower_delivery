@@ -1,13 +1,50 @@
 import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, Image, TouchableHighlight } from 'react-native';
-import React from 'react';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useEffect } from 'react';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Feather from 'react-native-vector-icons/Feather';
 import Fontisto from 'react-native-vector-icons/Fontisto';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+import { base_url } from '../../../App';
 
 const Profile = () => {
+
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [profileDetails, setProfileDetails] = React.useState({});
+
+  const getProfileDetails = async () => {
+    const access_token = await AsyncStorage.getItem('storeAccesstoken');
+    setIsLoading(true);
+    try {
+      const response = await fetch(base_url + 'api/rider/details', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setIsLoading(false);
+        // console.log('Profile fetched successfully', data.data);
+        setProfileDetails(data.data);
+      } else {
+        setIsLoading(false);
+        console.log('Failed to fetch pickups', data);
+      }
+    } catch (error) {
+      setIsLoading(false);
+      console.log('Error', error);
+    }
+  };
+
+  useEffect(() => {
+    if (isFocused) {
+      getProfileDetails();
+    }
+  }, [isFocused]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
@@ -18,32 +55,43 @@ const Profile = () => {
           <Text style={styles.headerTitle}>Profile</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Content */}
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
-        {/* User Info */}
-        <View style={styles.profileContainer}>
-          <Image
-            source={{ uri: 'https://media.licdn.com/dms/image/v2/D5635AQFU5CrFFlgekw/profile-framedphoto-shrink_400_400/profile-framedphoto-shrink_400_400/0/1715163749577?e=1733310000&v=beta&t=YgENOHuqhhx0JsD7VewPkBmO6oJkLTUWfOCiDzatIpM' }} // Replace with actual user photo URL
-            style={styles.profileImage}
-          />
-          <Text style={styles.userName}>John Doe</Text>
-          <Text style={styles.userDetails}>📱 +123 456 7890</Text>
-          <Text style={styles.userDetails}>📧 john.doe@example.com</Text>
-        </View>
-
-        {/* Statistics */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statBox}>
-            <Text style={styles.statCount}>150</Text>
-            <Text style={styles.statLabel}>Total Flowers Delivered</Text>
+      {!isLoading ?
+        <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
+          {/* User Info */}
+          <View style={styles.profileContainer}>
+            {profileDetails.rider_img ?
+              <Image
+                source={{ uri: profileDetails.rider_img }}
+                style={styles.profileImage}
+              />
+              :
+              <Image
+                source={require('../../assets/images/user.png')}
+                style={styles.profileImage}
+              />
+            }
+            <Text style={styles.userName}>{profileDetails.rider_name}</Text>
+            <Text style={styles.userDetails}>📱 {profileDetails.phone_number}</Text>
+            {/* <Text style={styles.userDetails}>📧 john.doe@example.com</Text> */}
           </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statCount}>15</Text>
-            <Text style={styles.statLabel}>Today's Deliveries</Text>
+
+          {/* Statistics */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statBox}>
+              <Text style={styles.statCount}>150</Text>
+              <Text style={styles.statLabel}>Total Flowers Delivered</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statCount}>15</Text>
+              <Text style={styles.statLabel}>Today's Deliveries</Text>
+            </View>
           </View>
+        </ScrollView>
+        :
+        <View style={{ flex: 1, alignSelf: 'center', top: '30%' }}>
+          <Text style={{ color: '#ffcb44', fontSize: 17 }}>Loading...</Text>
         </View>
-      </ScrollView>
+      }
 
       {/* Footer Navigation */}
       <View style={{ padding: 0, height: 58, borderRadius: 0, backgroundColor: '#fff', alignItems: 'center' }}>

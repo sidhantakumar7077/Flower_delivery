@@ -28,6 +28,7 @@
     "react-native-dropdown-picker": "^5.4.6",
     "react-native-flatlist-slider": "^1.0.6",
     "react-native-floating-label-input": "^1.4.3",
+    "react-native-geolocation-service": "^5.3.1",
     "react-native-gesture-handler": "^2.20.2",
     "react-native-image-picker": "^7.1.2",
     "react-native-linear-gradient": "^2.8.3",
