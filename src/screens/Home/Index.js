@@ -71,6 +71,29 @@ const Index = () => {
     }
   };
 
+  const [profileDetails, setProfileDetails] = React.useState({});
+
+  const getProfileDetails = async () => {
+    const access_token = await AsyncStorage.getItem('storeAccesstoken');
+    try {
+      const response = await fetch(base_url + 'api/rider/details', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        // console.log('Profile fetched successfully', data.data);
+        setProfileDetails(data.data);
+      } else {
+        console.log('Failed to fetch Profile', data);
+      }
+    } catch (error) {
+      console.log('Error', error);
+    }
+  };
+
   // Function to request location permissions
   const requestLocationPermission = async () => {
     if (Platform.OS === 'android') {
@@ -153,6 +176,7 @@ const Index = () => {
   useEffect(() => {
     if (isFocused) {
       getAllOrders();
+      getProfileDetails();
     }
   }, [isFocused]);
 
@@ -263,7 +287,7 @@ const Index = () => {
     <SafeAreaView style={{ flex: 1, flexDirection: 'column' }}>
       <View style={{ width: '100%', alignItems: 'center', paddingVertical: 10, backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.8, shadowRadius: 13, elevation: 5 }}>
         <View style={{ width: '90%', alignSelf: 'center', alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={{ color: '#000', fontSize: 17 }}>Hey, <Text style={{ color: 'red', fontSize: 20, fontWeight: 'bold', textTransform: 'capitalize', textShadowColor: '#000', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}>Sidhanta</Text></Text>
+          <Text style={{ color: '#000', fontSize: 17 }}>Hey, <Text style={{ color: 'red', fontSize: 20, fontWeight: 'bold', textTransform: 'capitalize', textShadowColor: '#000', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}>{profileDetails.rider_name}</Text></Text>
         </View>
       </View>
       {!isLoading ?

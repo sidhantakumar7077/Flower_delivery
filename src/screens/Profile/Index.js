@@ -32,7 +32,7 @@ const Profile = () => {
         setProfileDetails(data.data);
       } else {
         setIsLoading(false);
-        console.log('Failed to fetch pickups', data);
+        console.log('Failed to fetch Profile', data);
       }
     } catch (error) {
       setIsLoading(false);
