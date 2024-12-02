@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, TouchableHighlight, FlatList, TextInput } from 'react-native'
+import { StyleSheet, Text, View, SafeAreaView, ScrollView, TouchableOpacity, TouchableHighlight, FlatList, TextInput, RefreshControl } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,9 +12,19 @@ const Index = (props) => {
 
   const navigation = useNavigation();
   const isFocused = useIsFocused();
+  const [refreshing, setRefreshing] = React.useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [allPickups, setAllPickups] = useState([]);
   const [flowerPrices, setFlowerPrices] = useState({});
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+      fetchPickups();
+      console.log("Refreshing Successful");
+    }, 2000);
+  }, []);
 
   const fetchPickups = async () => {
     const access_token = await AsyncStorage.getItem('storeAccesstoken');
@@ -46,6 +56,14 @@ const Index = (props) => {
       fetchPickups();
     }
   }, [isFocused]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchPickups();
+    }, 10000); // Call every 10 seconds
+
+    return () => clearInterval(interval); // Cleanup interval on component unmount
+  }, []);
 
   const handlePriceChange = (flowerId, price) => {
     setFlowerPrices((prevPrices) => ({
@@ -107,7 +125,6 @@ const Index = (props) => {
     }
   };
 
-
   return (
     <SafeAreaView style={{ flex: 1, flexDirection: 'column' }}>
       <View style={styles.headerPart}>
@@ -117,11 +134,12 @@ const Index = (props) => {
         </TouchableOpacity>
       </View>
       {!isLoading ?
-        <View style={styles.container}>
+        <ScrollView style={styles.container} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} showsVerticalScrollIndicator={false}>
           {allPickups.length > 0 ?
             <FlatList
               data={allPickups}
               keyExtractor={(item) => item.pick_up_id}
+              scrollEnabled={false}
               renderItem={({ item }) => (
                 <View style={styles.cardView}>
                   {/* Pickup Info */}
@@ -206,11 +224,11 @@ const Index = (props) => {
               )}
             />
             :
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', top: 250 }}>
               <Text style={{ color: '#555', fontSize: 17 }}>No pickups available</Text>
             </View>
           }
-        </View>
+        </ScrollView>
         :
         <View style={{ flex: 1, alignSelf: 'center', top: '30%' }}>
           <Text style={{ color: '#ffcb44', fontSize: 17 }}>Loading...</Text>

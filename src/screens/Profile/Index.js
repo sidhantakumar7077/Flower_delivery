@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, Image, TouchableHighlight } from 'react-native';
+import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, Image, TouchableHighlight, RefreshControl } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,8 +12,18 @@ const Profile = () => {
 
   const navigation = useNavigation();
   const isFocused = useIsFocused();
+  const [refreshing, setRefreshing] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [profileDetails, setProfileDetails] = React.useState({});
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+      getProfileDetails();
+      console.log("Refreshing Successful");
+    }, 2000);
+  }, []);
 
   const getProfileDetails = async () => {
     const access_token = await AsyncStorage.getItem('storeAccesstoken');
@@ -56,7 +66,7 @@ const Profile = () => {
         </TouchableOpacity>
       </View>
       {!isLoading ?
-        <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
+        <ScrollView style={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} showsVerticalScrollIndicator={false}>
           {/* User Info */}
           <View style={styles.profileContainer}>
             {profileDetails.rider_img ?

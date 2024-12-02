@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, TouchableHighlight, FlatList, Animated, BackHandler, ToastAndroid, PermissionsAndroid, Modal, Alert } from 'react-native'
+import { StyleSheet, Text, View, SafeAreaView, ScrollView, TouchableOpacity, TouchableHighlight, FlatList, Animated, BackHandler, ToastAndroid, PermissionsAndroid, Modal, Alert, RefreshControl } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,6 +13,7 @@ const Index = () => {
 
   const navigation = useNavigation();
   const isFocused = useIsFocused();
+  const [refreshing, setRefreshing] = React.useState(false);
   const [expandedRow, setExpandedRow] = useState(null);
   const [backPressCount, setBackPressCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -21,6 +22,16 @@ const Index = () => {
   const [confirmDeliverModal, setConfirmDeliverModal] = useState(false);
   const openConfirmDeliverModal = () => setConfirmDeliverModal(true);
   const closeConfirmDeliverModal = () => setConfirmDeliverModal(false);
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+      getAllOrders();
+      getProfileDetails();
+      console.log("Refreshing Successful");
+    }, 2000);
+  }, []);
 
   useEffect(() => {
     const handleBackPress = () => {
@@ -179,6 +190,15 @@ const Index = () => {
       getProfileDetails();
     }
   }, [isFocused]);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      getAllOrders();
+      getProfileDetails();
+    }, 10000); // Call every 10 seconds
+
+    return () => clearInterval(interval); // Cleanup interval on component unmount
+  }, []);
 
   const renderTableRow = ({ item, index }) => (
     <View>
@@ -291,7 +311,7 @@ const Index = () => {
         </View>
       </View>
       {!isLoading ?
-        <View style={styles.container}>
+        <ScrollView style={styles.container} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} showsVerticalScrollIndicator={false}>
           {/* Table Header */}
           <View style={styles.tableHeader}>
             <Text style={[styles.tableHeaderText, styles.slNumber]}>Sl No</Text>
@@ -302,15 +322,16 @@ const Index = () => {
           {allOrders.length > 0 ?
             <FlatList
               data={allOrders}
+              scrollEnabled={true}
               renderItem={renderTableRow}
               keyExtractor={(item) => item.id}
             />
             :
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', top: 250 }}>
               <Text style={{ color: '#555', fontSize: 17 }}>No Orders available</Text>
             </View>
           }
-        </View>
+        </ScrollView>
         :
         <View style={{ flex: 1, alignSelf: 'center', top: '30%' }}>
           <Text style={{ color: '#ffcb44', fontSize: 17 }}>Loading...</Text>
