@@ -1,12 +1,15 @@
-import { StyleSheet, Text, View, SafeAreaView, ScrollView, TouchableOpacity, TouchableHighlight, FlatList, TextInput, RefreshControl } from 'react-native'
+import { StyleSheet, Text, View, SafeAreaView, ScrollView, TouchableOpacity, TouchableHighlight, FlatList, TextInput, RefreshControl, Modal } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Feather from 'react-native-vector-icons/Feather';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Fontisto from 'react-native-vector-icons/Fontisto';
+import { Calendar } from 'react-native-calendars';
 import { base_url } from '../../../App';
+import moment from 'moment';
 
 const Index = (props) => {
 
@@ -16,6 +19,20 @@ const Index = (props) => {
   const [isLoading, setIsLoading] = useState(false);
   const [allPickups, setAllPickups] = useState([]);
   const [flowerPrices, setFlowerPrices] = useState({});
+  const [otherTextmodal, setOtherTextmodal] = useState(false);
+  const openOtherTextmodal = () => setOtherTextmodal(true);
+  const closeOtherTextmodal = () => setOtherTextmodal(false);
+  const [otherDate, setOtherDate] = useState(null);
+  const [otherText, setOtherText] = useState('');
+  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
+  const openDatePicker = () => setDatePickerVisible(true);
+  const closeDatePicker = () => setDatePickerVisible(false);
+  const [otherPickupError, setOtherPickupError] = useState('');
+
+  const handleDayPress = (day) => {
+    setOtherDate(day.dateString);
+    closeDatePicker();
+  }
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
@@ -125,12 +142,57 @@ const Index = (props) => {
     }
   };
 
+  const handleOtherTextSave = async () => {
+    if (!otherDate || !otherText.trim()) {
+      setOtherPickupError('Please fill in all fields.');
+      setTimeout(() => {
+        setOtherPickupError('');
+      }, 10000);
+      return;
+    }
+
+    console.log('Saving other text:', otherDate, otherText);
+    try {
+      const access_token = await AsyncStorage.getItem('storeAccesstoken');
+      const response = await fetch(`${base_url}api/rider/flower-pickup-request`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pickup_date: otherDate,
+          pickdetails: otherText,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log("Other text saved successfully!", data);
+        fetchPickups();
+        closeOtherTextmodal();
+        setOtherDate(null);
+        setOtherText('');
+      } else {
+        console.log('Failed to save other text:', data);
+        // alert('Failed to save other text. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving other text:', error);
+      alert('An error occurred while saving other text.');
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, flexDirection: 'column' }}>
       <View style={styles.headerPart}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Feather name="chevron-left" color={'#555454'} size={30} />
           <Text style={styles.headerTitle}>Pickup</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={openOtherTextmodal} style={{ width: 80, backgroundColor: '#c9170a', borderRadius: 5, alignItems: 'center', padding: 8 }}>
+          <Text style={styles.saveButtonText}>Other</Text>
         </TouchableOpacity>
       </View>
       {!isLoading ?
@@ -263,6 +325,74 @@ const Index = (props) => {
           </View>
         </View>
       </View>
+
+      {/* Other Text Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={otherTextmodal}
+        onRequestClose={closeOtherTextmodal}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ width: '90%', backgroundColor: '#fff', padding: 20, borderRadius: 10 }}>
+            <Text style={{ fontSize: 16, fontWeight: '500', color: '#333', marginBottom: 10 }}>Date</Text>
+            <TouchableOpacity onPress={openDatePicker} style={{ width: '100%', height: 45, borderColor: '#ddd', justifyContent: 'center', borderWidth: 1, borderRadius: 5, paddingHorizontal: 10 }}>
+              <TextInput
+                style={{ width: '80%', height: 40, color: '#000', fontSize: 16 }}
+                value={otherDate ? moment(otherDate).format('DD-MM-YYYY') : ""}
+                placeholder="Select Date"
+                placeholderTextColor="#999"
+                editable={false}
+              />
+              <MaterialCommunityIcons name="calendar-month" color={'#555454'} size={26} style={{ position: 'absolute', right: 15, top: 10 }} />
+            </TouchableOpacity>
+            <Text style={{ fontSize: 16, fontWeight: '500', color: '#333', marginBottom: 10, marginTop: 16 }}>Other</Text>
+            <TextInput
+              style={[styles.input, { width: '100%', height: 100, textAlignVertical: 'top' }]}
+              placeholder="Enter Other Pickup Details"
+              placeholderTextColor="#999"
+              value={otherText}
+              onChangeText={(text) => setOtherText(text)}
+              multiline={true}
+              numberOfLines={4}
+            />
+            {otherPickupError ? <Text style={{ color: 'red', fontSize: 12, marginTop: 5 }}>{otherPickupError}</Text> : null}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 30 }}>
+              <TouchableOpacity onPress={closeOtherTextmodal} style={{ backgroundColor: '#c9170a', padding: 10, borderRadius: 5, width: '45%', alignItems: 'center' }}>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleOtherTextSave} style={{ backgroundColor: '#c9170a', padding: 10, borderRadius: 5, width: '45%', alignItems: 'center' }}>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Calendar Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isDatePickerVisible}
+        onRequestClose={closeDatePicker}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <View style={{ width: '90%', padding: 20, backgroundColor: 'white', borderRadius: 10, elevation: 5 }}>
+            <Calendar
+              onDayPress={handleDayPress}
+              markedDates={{
+                [moment(otherDate).format('YYYY-MM-DD')]: {
+                  selected: true,
+                  marked: true,
+                  selectedColor: 'blue'
+                }
+              }}
+              minDate={moment().format('YYYY-MM-DD')}
+            />
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
 
   )
@@ -281,6 +411,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#fff',
     paddingVertical: 13,
     paddingHorizontal: 5,

@@ -552,7 +552,7 @@ const Index = () => {
                   contentContainerStyle={{ flexGrow: 1 }}
                 />
                 :
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', top: 250 }}>
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                   <Text style={{ color: '#555', fontSize: 17 }}>No Orders available</Text>
                 </View>
               }
@@ -583,7 +583,7 @@ const Index = () => {
                   contentContainerStyle={{ flexGrow: 1 }}
                 />
                 :
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', top: 250 }}>
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                   <Text style={{ color: '#555', fontSize: 17 }}>No Orders available</Text>
                 </View>
               }
