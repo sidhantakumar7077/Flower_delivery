@@ -1,64 +1,129 @@
-# This config was automatically generated from your source code
-# Stacks detected: deps:java:android,deps:node:.,deps:ruby:.,test:jest:,tool:gradle:
 version: 2.1
-orbs:
-  node: circleci/node@5
+
+executors:
+  macos-executor:
+    macos:
+      xcode: "16.2.0"  # Specify the Xcode version
+
 jobs:
-  test-node:
-    # Install node dependencies and run tests
-    executor: node/default
-    environment:
-      JEST_JUNIT_OUTPUT_DIR: ./test-results/
+  install_ios_dependencies:
+    executor: macos-executor
     steps:
       - checkout
-      - node/install-packages:
-          pkg-manager: npm
       - run:
-          command: npm install jest-junit
+          name: Install Node.js and npm
+          command: |
+            brew install node
+            npm install -g npm
       - run:
-          name: Run tests
-          command: npm run test --ci --runInBand --reporters=default --reporters=jest-junit
-      - store_test_results:
-          path: ./test-results/
-  test-java:
-    docker:
-      - image: cimg/openjdk:17.0
-    working_directory: ~/project/android
-    steps:
-      - checkout:
-          path: ~/project
+          name: Install Project Dependencies
+          command: npm install
       - run:
-          name: Calculate cache key
-          command: |-
-            find . -name 'pom.xml' -o -name 'gradlew*' -o -name '*.gradle*' | \
-                    sort | xargs cat > /tmp/CIRCLECI_CACHE_KEY
+          name: Install React Native CLI
+          command: npm install -g react-native-cli
+      - run:
+          name: Install CocoaPods
+          command: sudo gem install cocoapods
+      - run:
+          name: Install CocoaPods Dependencies
+          command: |
+            cd ios
+            pod install
       - restore_cache:
-          key: cache-{{ checksum "/tmp/CIRCLECI_CACHE_KEY" }}
+          name: Restore node_modules cache
+          keys:
+            - v1-node-modules-{{ checksum "package-lock.json" }}
+            - v1-node-modules-
+      - restore_cache:
+          name: Restore Pods cache
+          keys:
+            - v1-pods-{{ checksum "ios/Podfile.lock" }}
+            - v1-pods-
       - run:
-          command: ./gradlew check
-      - store_test_results:
-          path: build/test-results
+          name: List Directory Contents
+          command: |
+            cd ios
+            ls -la
+      - run:
+          name: Verify TMS.xcworkspace
+          command: |
+            cd ios
+            if [ ! -d TMS.xcworkspace ]; then
+              echo "TMS.xcworkspace does not exist"
+              exit 1
+            fi
       - save_cache:
-          key: cache-{{ checksum "/tmp/CIRCLECI_CACHE_KEY" }}
+          name: Save node_modules cache
           paths:
-            - ~/.gradle/caches
-      - store_artifacts:
-          path: build/reports
-  deploy:
-    # This is an example deploy job, not actually used by the workflow
-    docker:
-      - image: cimg/base:stable
+            - ./node_modules
+          key: v1-node-modules-{{ checksum "package-lock.json" }}
+      - save_cache:
+          name: Save Pods cache
+          paths:
+            - ./ios/Pods
+            - ./ios/Podfile.lock
+          key: v1-pods-{{ checksum "ios/Podfile.lock" }}
+      - persist_to_workspace:
+          root: .
+          paths:
+            - ios/TMS.xcworkspace
+            - ios/Pods
+            - ios/Podfile.lock
+
+  build_ios:
+    executor: macos-executor
     steps:
-      # Replace this with steps to deploy to users
+      - checkout
+      - attach_workspace:
+          at: .
+      - restore_cache:
+          name: Restore node_modules cache
+          keys:
+            - v1-node-modules-{{ checksum "package-lock.json" }}
+            - v1-node-modules-
+      - restore_cache:
+          name: Restore Pods cache
+          keys:
+            - v1-pods-{{ checksum "ios/Podfile.lock" }}
+            - v1-pods-
       - run:
-          name: deploy
-          command: '#e.g. ./deploy.sh'
+          name: List Directory Contents Before Build
+          command: |
+            cd ios
+            ls -la
+      - run:
+          name: Build iOS App
+          command: |
+            cd ios
+            xcodebuild -workspace TMS.xcworkspace -scheme TMS -sdk iphoneos -configuration Release archive -archivePath $CIRCLE_WORKING_DIRECTORY/build/TMS.xcarchive DEVELOPMENT_TEAM=<Your_Development_Team_ID>
+            xcodebuild -exportArchive -archivePath $CIRCLE_WORKING_DIRECTORY/build/TMS.xcarchive -exportOptionsPlist exportOptions.plist -exportPath $CIRCLE_WORKING_DIRECTORY/build
+      - store_artifacts:
+          path: build/TMS.ipa
+          destination: build
+
+  deploy_to_app_store:
+    executor: macos-executor
+    steps:
+      - checkout
+      - run:
+          name: Install Fastlane
+          command: gem install fastlane
+      - run:
+          name: Upload to Apple App Store
+          command: fastlane deliver --ipa build/TMS.ipa --username $APP_STORE_CONNECT_USERNAME --app_identifier $APP_IDENTIFIER --skip_metadata --skip_screenshots --force
+
 workflows:
-  build-and-test:
+  version: 2
+  build_and_release:
     jobs:
-      - test-node
-      - test-java
-    # - deploy:
-    #     requires:
-    #       - test-node
-    #       - test-java
+      - install_ios_dependencies
+      - build_ios:
+          requires:
+            - install_ios_dependencies
+      - deploy_to_app_store:
+          requires:
+            - build_ios
+          filters:
+            branches:
+              only:
+                - ios_cicd
