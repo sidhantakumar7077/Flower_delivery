@@ -69,9 +69,9 @@ const Profile = () => {
         <ScrollView style={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} showsVerticalScrollIndicator={false}>
           {/* User Info */}
           <View style={styles.profileContainer}>
-            {profileDetails.rider_img ?
+            {profileDetails?.riderDetails?.rider_img ?
               <Image
-                source={{ uri: profileDetails.rider_img }}
+                source={{ uri: profileDetails.riderDetails.rider_img }}
                 style={styles.profileImage}
               />
               :
@@ -80,20 +80,20 @@ const Profile = () => {
                 style={styles.profileImage}
               />
             }
-            <Text style={styles.userName}>{profileDetails.rider_name}</Text>
-            <Text style={styles.userDetails}>📱 {profileDetails.phone_number}</Text>
+            <Text style={styles.userName}>{profileDetails?.riderDetails?.rider_name}</Text>
+            <Text style={styles.userDetails}>📱 {profileDetails?.riderDetails?.phone_number}</Text>
             {/* <Text style={styles.userDetails}>📧 john.doe@example.com</Text> */}
           </View>
 
           {/* Statistics */}
           <View style={styles.statsContainer}>
             <View style={styles.statBox}>
-              <Text style={styles.statCount}>150</Text>
-              <Text style={styles.statLabel}>Total Flowers Delivered</Text>
+              <Text style={styles.statCount}>{profileDetails?.totalDeliveries}</Text>
+              <Text style={styles.statLabel}>Total Flowers Deliveries</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statCount}>15</Text>
-              <Text style={styles.statLabel}>Today's Deliveries</Text>
+              <Text style={styles.statCount}>{profileDetails?.currentMonthDeliveries}</Text>
+              <Text style={styles.statLabel}>Current Month Deliveries</Text>
             </View>
           </View>
         </ScrollView>
