@@ -94,23 +94,23 @@ jobs:
       - run:
           name: Build iOS App
           command: |
-            cd ios
-            xcodebuild -workspace TMS.xcworkspace -scheme TMS -sdk iphoneos -configuration Release archive -archivePath $CIRCLE_WORKING_DIRECTORY/build/TMS.xcarchive DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM
-            xcodebuild -exportArchive -archivePath $CIRCLE_WORKING_DIRECTORY/build/TMS.xcarchive -exportOptionsPlist exportOptions.plist -exportPath $CIRCLE_WORKING_DIRECTORY/build
+             cd ios
+             xcodebuild -workspace TMS.xcworkspace -scheme TMS -sdk iphoneos -configuration Release archive -archivePath $CIRCLE_WORKING_DIRECTORY/build/TMS.xcarchive DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM -allowProvisioningUpdates
+             xcodebuild -exportArchive -archivePath $CIRCLE_WORKING_DIRECTORY/build/TMS.xcarchive -exportOptionsPlist exportOptions.plist -exportPath $CIRCLE_WORKING_DIRECTORY/build -allowProvisioningUpdates
       - store_artifacts:
           path: build/TMS.ipa
           destination: build
 
   deploy_to_app_store:
-    executor: macos-executor
-    steps:
-      - checkout
-      - run:
-          name: Install Fastlane
-          command: gem install fastlane
-      - run:
-          name: Upload to Apple App Store
-          command: fastlane deliver --ipa build/TMS.ipa --username $APP_STORE_CONNECT_USERNAME --app_identifier $APP_IDENTIFIER --skip_metadata --skip_screenshots --force
+      executor: macos-executor
+      steps:
+        - checkout
+        - run:
+            name: Install Fastlane
+            command: gem install fastlane
+        - run:
+            name: Deploy to Apple App Store
+            command: fastlane ios deploy
 
 workflows:
   version: 2

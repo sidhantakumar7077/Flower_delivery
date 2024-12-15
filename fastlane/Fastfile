@@ -1,0 +1,26 @@
+default_platform(:android)
+
+platform :android do
+  desc "Deploy to Google Play"
+  lane :deploy do
+    upload_to_play_store(
+      track: 'internal',
+      aab: 'android/app/build/outputs/bundle/release/app-release.aab'
+    )
+  end
+end
+
+platform :ios do
+  desc "Deploy to Apple App Store"
+  lane :deploy do
+    build_app(
+      workspace: "ios/Urbanhouse.xcworkspace",
+      scheme: "Urbanhouse",
+      export_method: "app-store"
+    )
+    upload_to_app_store(
+      username: ENV['APP_STORE_CONNECT_USERNAME'],
+      app_identifier: ENV['APP_IDENTIFIER']
+    )
+  end
+end
