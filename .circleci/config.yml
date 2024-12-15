@@ -95,7 +95,7 @@ jobs:
           name: Build iOS App
           command: |
             cd ios
-            xcodebuild -workspace TMS.xcworkspace -scheme TMS -sdk iphoneos -configuration Release archive -archivePath $CIRCLE_WORKING_DIRECTORY/build/TMS.xcarchive DEVELOPMENT_TEAM=<Your_Development_Team_ID>
+            xcodebuild -workspace TMS.xcworkspace -scheme TMS -sdk iphoneos -configuration Release archive -archivePath $CIRCLE_WORKING_DIRECTORY/build/TMS.xcarchive DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM
             xcodebuild -exportArchive -archivePath $CIRCLE_WORKING_DIRECTORY/build/TMS.xcarchive -exportOptionsPlist exportOptions.plist -exportPath $CIRCLE_WORKING_DIRECTORY/build
       - store_artifacts:
           path: build/TMS.ipa
