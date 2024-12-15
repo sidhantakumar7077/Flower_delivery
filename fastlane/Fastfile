@@ -30,7 +30,7 @@ platform :ios do
       output_name: "TMS.ipa",
       clean: true,
       include_bitcode: false,
-      allowProvisioningUpdates: true,
+      export_xcargs: "-allowProvisioningUpdates",
       team_id: ENV['DEVELOPMENT_TEAM'] # Add your Team ID here
     )
   end
