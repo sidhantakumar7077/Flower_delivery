@@ -31,7 +31,7 @@ platform :ios do
       clean: true,
       include_bitcode: false,
       export_xcargs: "-allowProvisioningUpdates",
-      team_id: ENV['DEVELOPMENT_TEAM'] # Add your Team ID here
+      export_team_id: ENV['DEVELOPMENT_TEAM'] # Add your Team ID here
     )
   end
 
