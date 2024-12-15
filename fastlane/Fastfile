@@ -11,13 +11,32 @@ platform :android do
 end
 
 platform :ios do
-  desc "Deploy to Apple App Store"
-  lane :deploy do
+  desc "Build the iOS app"
+  lane :build do
     build_app(
-      workspace: "ios/Urbanhouse.xcworkspace",
-      scheme: "Urbanhouse",
-      export_method: "app-store"
+      workspace: "ios/TMS.xcworkspace",
+      scheme: "TMS",
+      configuration: "Release",
+      sdk: "iphoneos",
+      export_method: "app-store",
+      archive_path: "$CIRCLE_WORKING_DIRECTORY/build/TMS.xcarchive",
+      export_options: {
+        provisioningProfiles: {
+          "org.reactjs.native.example.TMS" => "match AppStore org.reactjs.native.example.TMS"
+        }
+      },
+      build_path: "$CIRCLE_WORKING_DIRECTORY/build",
+      output_directory: "$CIRCLE_WORKING_DIRECTORY/build",
+      output_name: "TMS.ipa",
+      clean: true,
+      include_bitcode: false,
+      allowProvisioningUpdates: true,
+      team_id: ENV['DEVELOPMENT_TEAM'] # Add your Team ID here
     )
+  end
+
+  desc "Deploy the iOS app to Apple App Store"
+  lane :deploy do
     upload_to_app_store(
       username: ENV['APP_STORE_CONNECT_USERNAME'],
       app_identifier: ENV['APP_IDENTIFIER']

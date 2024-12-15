@@ -93,10 +93,7 @@ jobs:
             ls -la
       - run:
           name: Build iOS App
-          command: |
-             cd ios
-             xcodebuild -workspace TMS.xcworkspace -scheme TMS -sdk iphoneos -configuration Release archive -archivePath $CIRCLE_WORKING_DIRECTORY/build/TMS.xcarchive DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM -allowProvisioningUpdates
-             xcodebuild -exportArchive -archivePath $CIRCLE_WORKING_DIRECTORY/build/TMS.xcarchive -exportOptionsPlist exportOptions.plist -exportPath $CIRCLE_WORKING_DIRECTORY/build -allowProvisioningUpdates
+          command: fastlane ios build
       - store_artifacts:
           path: build/TMS.ipa
           destination: build
