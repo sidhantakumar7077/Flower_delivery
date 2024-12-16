@@ -25,7 +25,8 @@ end
 platform :ios do
   desc "Ensure the correct Xcode version"
   lane :set_xcode_version do
-    xcodes(version: "16.2")  # Use the xcodes gem to specify the Xcode version
+    sh("xcodes install 16.2")  # Use the xcodes gem to specify the Xcode version
+    sh("xcodes select 16.2")
   end
 
   desc "Build the iOS app"

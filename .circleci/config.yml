@@ -99,7 +99,7 @@ jobs:
           command: xcodebuild -version
       - run:
           name: Build iOS App
-          command: fastlane ios build
+          command: bundle exec fastlane ios build
       - store_artifacts:
           path: build/TMS.ipa
           destination: build
@@ -119,7 +119,7 @@ jobs:
           command: xcodebuild -version
       - run:
           name: Deploy to Apple App Store
-          command: fastlane ios deploy
+          command: bundle exec fastlane ios deploy
 
 workflows:
   version: 2
