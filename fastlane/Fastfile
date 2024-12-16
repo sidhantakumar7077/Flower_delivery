@@ -23,8 +23,15 @@ platform :android do
 end
 
 platform :ios do
+  desc "Ensure the correct Xcode version"
+  lane :set_xcode_version do
+    xcversion(version: "16.2")
+  end
+
   desc "Build the iOS app"
   lane :build do
+    set_xcode_version
+
     build_app(
       workspace: "ios/TMS.xcworkspace",
       scheme: "TMS",
