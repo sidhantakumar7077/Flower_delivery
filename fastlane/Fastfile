@@ -1,6 +1,18 @@
 default_platform(:android)
 
 platform :android do
+  desc "Build Android App Bundle"
+  lane :build_aab do
+    gradle(
+      task: "bundle",
+      build_type: "Release",
+      properties: {
+        "keystorePassword" => ENV['KEYSTORE_PASSWORD'],
+        "keyAlias" => ENV['KEYSTORE_ALIAS']
+      }
+    )
+  end
+
   desc "Deploy to Google Play"
   lane :deploy do
     upload_to_play_store(

@@ -27,10 +27,10 @@ build_aab:
   before_script:
     - echo "$KEYSTORE_FILE" | base64 -d > android/app/my-upload-key.keystore  # Decode keystore file securely from GitLab CI/CD variables
     - chmod +x android/gradlew  # Add execute permissions to gradlew
+    - gem install fastlane  # Install Fastlane
   script:
     - cd android
-    - ./gradlew clean  # Clean any previous builds
-    - ./gradlew bundleRelease -PkeystorePassword=$KEYSTORE_PASSWORD -PkeyAlias=$KEYSTORE_ALIAS  # Build AAB with signing
+    - fastlane build_aab  # Use Fastlane to build the AAB
   artifacts:
     paths:
       - android/app/build/outputs/bundle/release/app-release.aab

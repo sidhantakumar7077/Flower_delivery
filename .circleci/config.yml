@@ -93,21 +93,25 @@ jobs:
             ls -la
       - run:
           name: Build iOS App
-          command: fastlane ios build
+          command: |
+            sudo xcode-select -s /Applications/Xcode-16.2.app
+            fastlane ios build
       - store_artifacts:
           path: build/TMS.ipa
           destination: build
 
   deploy_to_app_store:
-      executor: macos-executor
-      steps:
-        - checkout
-        - run:
-            name: Install Fastlane
-            command: gem install fastlane
-        - run:
-            name: Deploy to Apple App Store
-            command: fastlane ios deploy
+    executor: macos-executor
+    steps:
+      - checkout
+      - run:
+          name: Install Fastlane
+          command: gem install fastlane
+      - run:
+          name: Deploy to Apple App Store
+          command: |
+            sudo xcode-select -s /Applications/Xcode-16.2.app
+            fastlane ios deploy
 
 workflows:
   version: 2
