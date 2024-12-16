@@ -101,6 +101,12 @@ jobs:
           name: Verify Xcode Version
           command: xcodebuild -version
       - run:
+          name: Install Bundler
+          command: gem install bundler
+      - run:
+          name: Install Gems
+          command: bundle install
+      - run:
           name: Build iOS App
           command: bundle exec fastlane ios build
       - store_artifacts:
@@ -120,6 +126,12 @@ jobs:
       - run:
           name: Verify Xcode Version
           command: xcodebuild -version
+      - run:
+          name: Install Bundler
+          command: gem install bundler
+      - run:
+          name: Install Gems
+          command: bundle install
       - run:
           name: Deploy to Apple App Store
           command: bundle exec fastlane ios deploy
