@@ -95,17 +95,8 @@ jobs:
             cd ios
             ls -la
       - run:
-          name: Install Bundler
-          command: gem install bundler
-      - run:
-          name: Install Gems
-          command: bundle install
-      - run:
           name: Set Xcode Version
-          command: bundle exec xcodes install 16.2
-      - run:
-          name: Select Xcode Version
-          command: bundle exec xcodes select 16.2
+          command: sudo xcode-select -s /Applications/Xcode-16.2.app
       - run:
           name: Verify Xcode Version
           command: xcodebuild -version
@@ -124,17 +115,8 @@ jobs:
           name: Install Fastlane
           command: gem install fastlane
       - run:
-          name: Install Bundler
-          command: gem install bundler
-      - run:
-          name: Install Gems
-          command: bundle install
-      - run:
           name: Set Xcode Version
-          command: bundle exec xcodes install 16.2
-      - run:
-          name: Select Xcode Version
-          command: bundle exec xcodes select 16.2
+          command: sudo xcode-select -s /Applications/Xcode-16.2.app
       - run:
           name: Verify Xcode Version
           command: xcodebuild -version
