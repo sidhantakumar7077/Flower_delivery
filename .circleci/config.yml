@@ -22,8 +22,11 @@ jobs:
           name: Install React Native CLI
           command: npm install -g react-native-cli
       - run:
+          name: Install Bundler
+          command: gem install bundler
+      - run:
           name: Install CocoaPods
-          command: sudo gem install cocoapods
+          command: bundle install
       - run:
           name: Install CocoaPods Dependencies
           command: |
