@@ -1,4 +1,4 @@
-default_platform(:android)
+default_platform(:ios)
 
 platform :android do
   desc "Build Android App Bundle"
@@ -25,7 +25,7 @@ end
 platform :ios do
   desc "Ensure the correct Xcode version"
   lane :set_xcode_version do
-    xcversion(version: "16.2")
+    xcodes(version: "16.2")  # Use the xcodes gem to specify the Xcode version
   end
 
   desc "Build the iOS app"
