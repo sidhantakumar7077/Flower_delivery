@@ -91,8 +91,8 @@ const Index = (props) => {
 
   const calculateTotalPrice = (flowerPickupItems) => {
     return flowerPickupItems.reduce((total, flowerItem) => {
-      const flowerPrice = parseFloat(flowerPrices[flowerItem.flower?.id] || 0);
-      const quantity = parseInt(flowerItem.quantity || 0);
+      const flowerPrice = parseFloat(flowerPrices[flowerItem.id] || 0);
+      // const quantity = parseInt(flowerItem.quantity || 0);
       return total + flowerPrice;
     }, 0).toFixed(2);
   };
@@ -103,6 +103,7 @@ const Index = (props) => {
     // Construct the request payload
     const pricesToSave = flowerItems.map((flowerItem) => ({
       flower_id: flowerItem.flower?.product_id,
+      id: flowerItem.id,
       price: parseFloat(flowerPrices[flowerItem.id] || 0).toFixed(2),
     }));
 
