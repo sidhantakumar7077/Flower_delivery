@@ -281,7 +281,7 @@ const Index = () => {
       getAllOrders();
       getRequestOrders();
       getProfileDetails();
-    }, 10000); // Call every 10 seconds
+    }, 600000); // Call every 10 minutes (600000 milliseconds)
 
     return () => clearInterval(interval); // Cleanup interval on component unmount
   }, []);
