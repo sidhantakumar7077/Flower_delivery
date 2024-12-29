@@ -362,7 +362,7 @@ const Index = () => {
         <Text style={[styles.tableCell, styles.slNumber]}>{index + 1}</Text>
         <Text style={[styles.tableCell, styles.phone]}>{item.order.user.mobile_number.replace('+91', '')}</Text>
         <Text style={[styles.tableCell, styles.address]}>{item.order.address.apartment_flat_plot}</Text>
-        {item.delivery_status === 'delivered' ?
+        {item.order.delivery && item.order.delivery?.delivery_status === 'delivered' ?
           <View style={styles.deliveredButton}>
             <Text style={styles.deliveredButtonText}>Delivered</Text>
           </View>
