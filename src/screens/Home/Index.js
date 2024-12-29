@@ -1,6 +1,6 @@
-import { StyleSheet, Text, View, SafeAreaView, ScrollView, TouchableOpacity, TouchableHighlight, FlatList, Animated, BackHandler, ToastAndroid, PermissionsAndroid, Modal, Alert, RefreshControl, LayoutAnimation, ActivityIndicator } from 'react-native'
-import React, { useState, useEffect } from 'react'
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { StyleSheet, Text, View, SafeAreaView, ScrollView, TouchableOpacity, TouchableHighlight, FlatList, Animated, Easing, BackHandler, ToastAndroid, PermissionsAndroid, Modal, Alert, RefreshControl, LayoutAnimation, ActivityIndicator } from 'react-native'
+import React, { useState, useEffect, useRef } from 'react'
+import { useNavigation, useIsFocused, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Geolocation from 'react-native-geolocation-service';
 // import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -29,6 +29,75 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState('sub_list');
   const [notDeliveredSubCount, setNotDeliveredSubCount] = useState(0);
   const [notDeliveredReqCount, setNotDeliveredReqCount] = useState(0);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const startAnimation = () => {
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(scaleAnim, {
+              toValue: 1.2,
+              duration: 1000,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(scaleAnim, {
+              toValue: 1,
+              duration: 1000,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+        ).start();
+      };
+
+      startAnimation();
+
+      return () => scaleAnim.stopAnimation(); // Cleanup the animation when the component unmounts or navigates away
+    }, [scaleAnim])
+  );
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.8,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start(() => {
+      startDelivery();
+    });
+  };
+
+  const startDelivery = async () => {
+    const access_token = await AsyncStorage.getItem('storeAccesstoken');
+    try {
+      const response = await fetch(base_url + 'api/start-delivery', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        console.log('Delivery started successfully', data);
+        getAllOrders();
+      } else {
+        console.log('Failed to start delivery', data);
+      }
+    } catch (error) {
+      console.log('Error', error);
+    }
+  };
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
@@ -102,7 +171,7 @@ const Index = () => {
         setIsLoading(false);
         // console.log('Request Orders fetched successfully', data.data);
         setRequestOrders(data.data);
-        setNotDeliveredReqCount(data.data.filter(item => item.delivery === null).length);
+        setNotDeliveredReqCount(data.data.filter(item => item.delivery_customize_history === null).length);
       } else {
         setIsLoading(false);
         console.log('Failed to fetch orders', data);
@@ -281,7 +350,7 @@ const Index = () => {
       getAllOrders();
       getRequestOrders();
       getProfileDetails();
-    }, 10000); // Call every 10 seconds
+    }, 600000); // Call every 10 minutes (600000 milliseconds)
 
     return () => clearInterval(interval); // Cleanup interval on component unmount
   }, []);
@@ -291,9 +360,9 @@ const Index = () => {
       {/* Main Row */}
       <TouchableOpacity onPress={() => toggleExpandRow(item.id)} style={styles.tableRow}>
         <Text style={[styles.tableCell, styles.slNumber]}>{index + 1}</Text>
-        <Text style={[styles.tableCell, styles.phone]}>{item.user.mobile_number.replace('+91', '')}</Text>
-        <Text style={[styles.tableCell, styles.address]}>{item.address.apartment_flat_plot}</Text>
-        {item.delivery && item.delivery.delivery_status === 'delivered' ?
+        <Text style={[styles.tableCell, styles.phone]}>{item.order.user.mobile_number.replace('+91', '')}</Text>
+        <Text style={[styles.tableCell, styles.address]}>{item.order.address.apartment_flat_plot}</Text>
+        {item.order.delivery && item.order.delivery?.delivery_status === 'delivered' ?
           <View style={styles.deliveredButton}>
             <Text style={styles.deliveredButtonText}>Delivered</Text>
           </View>
@@ -309,7 +378,7 @@ const Index = () => {
 
       {/* Collapsible Section */}
       {expandedRow === item.id && (
-        <Animated.View style={styles.collapsibleContent}>
+        <View style={styles.collapsibleContent}>
           <View style={{ width: '100%' }}>
             <Text style={{ color: '#000', fontSize: 17, fontWeight: '600', marginBottom: 8, textDecorationLine: 'underline' }}>Order Details</Text>
             <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
@@ -325,7 +394,7 @@ const Index = () => {
                 <Text style={styles.detailsText}>Phone:</Text>
               </View>
               <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.user.mobile_number.replace('+91', '')}</Text>
+                <Text style={styles.detailsText}>{item.order.user.mobile_number.replace('+91', '')}</Text>
               </View>
             </View>
             <Text style={{ color: '#000', fontSize: 17, fontWeight: '600', marginBottom: 8, textDecorationLine: 'underline' }}>Product Details</Text>
@@ -334,7 +403,7 @@ const Index = () => {
                 <Text style={styles.detailsText}>Name:</Text>
               </View>
               <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.flower_product.name}</Text>
+                <Text style={styles.detailsText}>{item.order.flower_product.name}</Text>
               </View>
             </View>
             <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
@@ -342,7 +411,7 @@ const Index = () => {
                 <Text style={styles.detailsText}>Price:</Text>
               </View>
               <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.flower_product.price}</Text>
+                <Text style={styles.detailsText}>{item.order.flower_product.price}</Text>
               </View>
             </View>
             <Text style={{ color: '#000', fontSize: 17, fontWeight: '600', marginBottom: 8, textDecorationLine: 'underline' }}>Address</Text>
@@ -351,7 +420,7 @@ const Index = () => {
                 <Text style={styles.detailsText}>Flat/Plot:</Text>
               </View>
               <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.address.apartment_flat_plot}</Text>
+                <Text style={styles.detailsText}>{item.order.address.apartment_flat_plot}</Text>
               </View>
             </View>
             <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
@@ -359,7 +428,7 @@ const Index = () => {
                 <Text style={styles.detailsText}>Landmark:</Text>
               </View>
               <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.address.landmark}</Text>
+                <Text style={styles.detailsText}>{item.order.address.landmark}</Text>
               </View>
             </View>
             <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
@@ -367,7 +436,7 @@ const Index = () => {
                 <Text style={styles.detailsText}>Locality:</Text>
               </View>
               <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.address.locality_details.locality_name}</Text>
+                <Text style={styles.detailsText}>{item.order.address.locality_details.locality_name}</Text>
               </View>
             </View>
             <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
@@ -375,7 +444,7 @@ const Index = () => {
                 <Text style={styles.detailsText}>City:</Text>
               </View>
               <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.address.city}</Text>
+                <Text style={styles.detailsText}>{item.order.address.city}</Text>
               </View>
             </View>
             <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
@@ -383,11 +452,11 @@ const Index = () => {
                 <Text style={styles.detailsText}>Pincode:</Text>
               </View>
               <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.address.pincode}</Text>
+                <Text style={styles.detailsText}>{item.order.address.pincode}</Text>
               </View>
             </View>
           </View>
-        </Animated.View>
+        </View>
       )}
     </View>
   );
@@ -399,7 +468,7 @@ const Index = () => {
         <Text style={[styles.tableCell, styles.slNumber]}>{index + 1}</Text>
         <Text style={[styles.tableCell, styles.phone]}>{item.user.mobile_number.replace('+91', '')}</Text>
         <Text style={[styles.tableCell, styles.address]}>{item.address.apartment_flat_plot}</Text>
-        {item.delivery && item.delivery.delivery_status === 'delivered' ?
+        {item.delivery_customize_history && item.delivery_customize_history.delivery_status === 'delivered' ?
           <View style={styles.deliveredButton}>
             <Text style={styles.deliveredButtonText}>Delivered</Text>
           </View>
@@ -415,7 +484,7 @@ const Index = () => {
 
       {/* Collapsible Section */}
       {expandedRow === item.id && (
-        <Animated.View style={styles.collapsibleContent}>
+        <View style={styles.collapsibleContent}>
           <View style={{ width: '100%' }}>
             <Text style={{ color: '#000', fontSize: 17, fontWeight: '600', marginBottom: 8, textDecorationLine: 'underline' }}>Order Details</Text>
             <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
@@ -493,7 +562,7 @@ const Index = () => {
               </View>
             </View>
           </View>
-        </Animated.View>
+        </View>
       )}
     </View>
   );
@@ -553,7 +622,16 @@ const Index = () => {
                 />
                 :
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: '#555', fontSize: 17 }}>No Orders available</Text>
+                  {/* <Text style={{ color: '#555', fontSize: 17 }}>No Orders available</Text> */}
+                  <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                    <TouchableOpacity
+                      onPressIn={handlePressIn}
+                      onPressOut={handlePressOut}
+                      style={styles.pModalCheckCircle}
+                    >
+                      <Text style={styles.buttonText}>Start Delivery</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
                 </View>
               }
             </View>
@@ -680,6 +758,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#000',
   },
+  pModalCheckCircle: {
+    marginBottom: 20,
+    width: 120,
+    height: 120,
+    borderRadius: 100,
+    backgroundColor: '#c9170a',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    width: '90%',
+    alignSelf: 'center',
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
   tableRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -713,7 +808,7 @@ const styles = StyleSheet.create({
     height: 35,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#28a745',
+    backgroundColor: '#b6b8b6',
     borderRadius: 5,
   },
   deliveredButtonText: {

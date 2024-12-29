@@ -77,7 +77,7 @@ const Index = (props) => {
   useEffect(() => {
     const interval = setInterval(() => {
       fetchPickups();
-    }, 10000); // Call every 10 seconds
+    }, 600000); // Call every 10 minutes (600000 milliseconds)
 
     return () => clearInterval(interval); // Cleanup interval on component unmount
   }, []);
@@ -91,8 +91,8 @@ const Index = (props) => {
 
   const calculateTotalPrice = (flowerPickupItems) => {
     return flowerPickupItems.reduce((total, flowerItem) => {
-      const flowerPrice = parseFloat(flowerPrices[flowerItem.flower?.id] || 0);
-      const quantity = parseInt(flowerItem.quantity || 0);
+      const flowerPrice = parseFloat(flowerPrices[flowerItem.id] || 0);
+      // const quantity = parseInt(flowerItem.quantity || 0);
       return total + flowerPrice;
     }, 0).toFixed(2);
   };
@@ -103,7 +103,8 @@ const Index = (props) => {
     // Construct the request payload
     const pricesToSave = flowerItems.map((flowerItem) => ({
       flower_id: flowerItem.flower?.product_id,
-      price: parseFloat(flowerPrices[flowerItem.flower?.id] || 0).toFixed(2),
+      id: flowerItem.id,
+      price: parseFloat(flowerPrices[flowerItem.id] || 0).toFixed(2),
     }));
 
     const totalPrice = pricesToSave.reduce((total, item) => total + parseFloat(item.price), 0).toFixed(2);
@@ -113,7 +114,8 @@ const Index = (props) => {
       flower_pickup_items: pricesToSave,
     };
 
-    console.log('Saving prices for pickup:', pickupId, payload);
+    // console.log('Saving prices for pickup:', pickupId, payload);
+    // return;
 
     try {
       const access_token = await AsyncStorage.getItem('storeAccesstoken');
@@ -250,8 +252,8 @@ const Index = (props) => {
                               placeholder="Enter price"
                               placeholderTextColor="#999"
                               keyboardType="numeric"
-                              value={flowerPrices[flowerItem.flower?.id] || ''}
-                              onChangeText={(text) => handlePriceChange(flowerItem.flower?.id, text)}
+                              value={flowerPrices[flowerItem.id] || ''}
+                              onChangeText={(text) => handlePriceChange(flowerItem.id, text)}
                             />
                           }
                         </View>
