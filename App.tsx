@@ -63,7 +63,7 @@ const App = () => {
 
   return (
     <NavigationContainer>
-      <StatusBar backgroundColor="#c9170a" barStyle="light-content" />
+      <StatusBar backgroundColor="#1E293B" barStyle="light-content" />
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {showSplash ? (<Stack.Screen name="SplashScreen" component={SplashScreen} options={{ presentation: 'modal', animationTypeForReplace: 'push', animation: 'slide_from_right' }} />) : null}
         {!isConnected ? (

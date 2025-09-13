@@ -1,66 +1,88 @@
-import { StyleSheet, Text, View, SafeAreaView, ScrollView, TouchableOpacity, TouchableHighlight, FlatList, Animated, Easing, BackHandler, ToastAndroid, PermissionsAndroid, Modal, Alert, RefreshControl, LayoutAnimation, ActivityIndicator } from 'react-native'
-import React, { useState, useEffect, useRef } from 'react'
+import {
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  TouchableHighlight,
+  FlatList,
+  Animated,
+  Easing,
+  BackHandler,
+  ToastAndroid,
+  PermissionsAndroid,
+  Modal,
+  Alert,
+  RefreshControl,
+  LayoutAnimation,
+  ActivityIndicator,
+  Platform,
+} from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigation, useIsFocused, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Geolocation from 'react-native-geolocation-service';
-// import Ionicons from 'react-native-vector-icons/Ionicons';
+import LinearGradient from 'react-native-linear-gradient';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Fontisto from 'react-native-vector-icons/Fontisto';
 import { base_url } from '../../../App';
 
-const Index = () => {
+const BRAND_GRADIENT = ['#1E293B', '#334155', '#475569'];
+const ACCENT = '#c9170a';
 
+const Index = () => {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
+
   const [refreshing, setRefreshing] = React.useState(false);
   const [expandedRow, setExpandedRow] = useState(null);
   const [backPressCount, setBackPressCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [spinner, setSpinner] = useState(false);
+
   const [allOrders, setAllOrders] = useState([]);
   const [requestOrders, setRequestOrders] = useState([]);
   const [order_id, setOrder_id] = useState(null);
   const [req_id, setReqId] = useState(null);
   const [delivery_category, setDeliveryCategory] = useState(null);
+
   const [confirmDeliverModal, setConfirmDeliverModal] = useState(false);
   const openConfirmDeliverModal = () => setConfirmDeliverModal(true);
   const closeConfirmDeliverModal = () => setConfirmDeliverModal(false);
+
   const [activeTab, setActiveTab] = useState('sub_list');
   const [notDeliveredSubCount, setNotDeliveredSubCount] = useState(0);
   const [notDeliveredReqCount, setNotDeliveredReqCount] = useState(0);
+
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useFocusEffect(
     React.useCallback(() => {
-      const startAnimation = () => {
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(scaleAnim, {
-              toValue: 1.2,
-              duration: 1000,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-            Animated.timing(scaleAnim, {
-              toValue: 1,
-              duration: 1000,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-          ]),
-        ).start();
-      };
-
-      startAnimation();
-
-      return () => scaleAnim.stopAnimation(); // Cleanup the animation when the component unmounts or navigates away
+      const anim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(scaleAnim, {
+            toValue: 1.12,
+            duration: 900,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 1,
+            duration: 900,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      anim.start();
+      return () => anim.stop();
     }, [scaleAnim])
   );
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
-      toValue: 0.8,
+      toValue: 0.96,
       useNativeDriver: true,
     }).start();
   };
@@ -68,8 +90,8 @@ const Index = () => {
   const handlePressOut = () => {
     Animated.spring(scaleAnim, {
       toValue: 1,
-      friction: 3,
-      tension: 40,
+      friction: 4,
+      tension: 50,
       useNativeDriver: true,
     }).start(() => {
       startDelivery();
@@ -86,10 +108,8 @@ const Index = () => {
           'Content-Type': 'application/json',
         },
       });
-
       const data = await response.json();
       if (response.ok) {
-        console.log('Delivery started successfully', data);
         getAllOrders();
       } else {
         console.log('Failed to start delivery', data);
@@ -108,20 +128,17 @@ const Index = () => {
   useEffect(() => {
     const handleBackPress = () => {
       if (backPressCount === 1) {
-        BackHandler.exitApp(); // Exit the app if back button is pressed twice within 2 seconds
+        BackHandler.exitApp();
         return true;
       }
       ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
       setBackPressCount(1);
-      const timeout = setTimeout(() => {
-        setBackPressCount(0);
-      }, 2000); // Reset back press count after 2 seconds
-      return true; // Prevent default behavior
+      setTimeout(() => setBackPressCount(0), 2000);
+      return true;
     };
-
     if (isFocused) {
       const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
-      return () => backHandler.remove(); // Cleanup the event listener when the component unmounts or navigates away
+      return () => backHandler.remove();
     }
   }, [backPressCount, isFocused]);
 
@@ -136,23 +153,19 @@ const Index = () => {
     try {
       const response = await fetch(base_url + 'api/rider/get-assign-orders', {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${access_token}`,
-        },
+        headers: { 'Authorization': `Bearer ${access_token}` },
       });
       const data = await response.json();
       if (response.ok) {
-        setIsLoading(false);
-        // console.log('Orders fetched successfully', data.data);
         setAllOrders(data.data);
         setNotDeliveredSubCount(data.data.filter(item => item.delivery === null).length);
       } else {
-        setIsLoading(false);
         console.log('Failed to fetch orders', data);
       }
     } catch (error) {
-      setIsLoading(false);
       console.log('Error', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -162,23 +175,21 @@ const Index = () => {
     try {
       const response = await fetch(base_url + 'api/rider/requested-today-orders', {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${access_token}`,
-        },
+        headers: { 'Authorization': `Bearer ${access_token}` },
       });
       const data = await response.json();
       if (response.ok) {
-        setIsLoading(false);
-        // console.log('Request Orders fetched successfully', data.data);
         setRequestOrders(data.data);
-        setNotDeliveredReqCount(data.data.filter(item => item.delivery_customize_history === null).length);
+        setNotDeliveredReqCount(
+          data.data.filter(item => item.delivery_customize_history === null).length
+        );
       } else {
-        setIsLoading(false);
         console.log('Failed to fetch orders', data);
       }
     } catch (error) {
-      setIsLoading(false);
       console.log('Error', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -189,13 +200,10 @@ const Index = () => {
     try {
       const response = await fetch(base_url + 'api/rider/details', {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${access_token}`,
-        },
+        headers: { 'Authorization': `Bearer ${access_token}` },
       });
       const data = await response.json();
       if (response.ok) {
-        // console.log('Profile fetched successfully', data.data);
         setProfileDetails(data.data);
       } else {
         console.log('Failed to fetch Profile', data);
@@ -205,28 +213,21 @@ const Index = () => {
     }
   };
 
-  // Function to request location permissions
   const requestLocationPermission = async () => {
     if (Platform.OS === 'android') {
       const granted = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
       );
-
-      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-        return true;
-      } else {
-        Alert.alert('Permission Denied', 'Location permission is required to proceed.');
-        return false;
-      }
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) return true;
+      Alert.alert('Permission Denied', 'Location permission is required to proceed.');
+      return false;
     }
-    return true; // iOS permissions are handled automatically in most cases
+    return true;
   };
 
-  // Function to get location
   const getLocation = async () => {
     const hasPermission = await requestLocationPermission();
     if (!hasPermission) return null;
-
     return new Promise((resolve, reject) => {
       Geolocation.getCurrentPosition(
         (position) => resolve(position),
@@ -239,19 +240,17 @@ const Index = () => {
     });
   };
 
-  const openConfirmModal = (order_id, dType) => {
+  const openConfirmModal = (oid, dType) => {
     setDeliveryCategory(dType);
-    setOrder_id(order_id);
+    setOrder_id(oid);
+    openConfirmDeliverModal();
+  };
+  const openConfirmReqModal = (rid, dType) => {
+    setDeliveryCategory(dType);
+    setReqId(rid);
     openConfirmDeliverModal();
   };
 
-  const openConfirmReqModal = (req_id, dType) => {
-    setDeliveryCategory(dType);
-    setReqId(req_id);
-    openConfirmDeliverModal();
-  };
-
-  // Update the delivered function
   const delivered = async () => {
     const access_token = await AsyncStorage.getItem('storeAccesstoken');
     closeConfirmDeliverModal();
@@ -259,12 +258,7 @@ const Index = () => {
     try {
       const location = await getLocation();
       if (!location) return;
-
       const { latitude, longitude } = location.coords;
-
-      console.log("delivering order", order_id, latitude, longitude);
-      // return;
-
       const response = await fetch(base_url + `api/rider/deliver/${order_id}`, {
         method: 'POST',
         headers: {
@@ -273,26 +267,20 @@ const Index = () => {
         },
         body: JSON.stringify({ latitude, longitude }),
       });
-
       const data = await response.json();
       if (response.ok) {
-        console.log('Order delivered successfully', data);
         getAllOrders();
         getRequestOrders();
-        setSpinner(false);
       } else {
-        console.log('Failed to deliver order', data);
-        Alert.alert('Failed to deliver order', data.message);
-        setSpinner(false);
+        Alert.alert('Failed to deliver order', data.message || 'Please try again.');
       }
     } catch (error) {
-      console.log('Error', error);
-      Alert.alert('Error', error);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } finally {
       setSpinner(false);
     }
   };
 
-  // update Requested order
   const deliveredReq = async () => {
     const access_token = await AsyncStorage.getItem('storeAccesstoken');
     closeConfirmDeliverModal();
@@ -300,12 +288,7 @@ const Index = () => {
     try {
       const location = await getLocation();
       if (!location) return;
-
       const { latitude, longitude } = location.coords;
-
-      console.log("delivering order", order_id, latitude, longitude);
-      // return;
-
       const response = await fetch(base_url + `api/rider/requested-deliver/${req_id}`, {
         method: 'POST',
         headers: {
@@ -314,21 +297,16 @@ const Index = () => {
         },
         body: JSON.stringify({ latitude, longitude }),
       });
-
       const data = await response.json();
       if (response.ok) {
-        console.log('Order delivered successfully', data);
         getAllOrders();
         getRequestOrders();
-        setSpinner(false);
       } else {
-        console.log('Failed to deliver order', data);
-        Alert.alert('Failed to deliver order', data.message);
-        setSpinner(false);
+        Alert.alert('Failed to deliver order', data.message || 'Please try again.');
       }
     } catch (error) {
-      console.log('Error', error);
-      Alert.alert('Error', error);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } finally {
       setSpinner(false);
     }
   };
@@ -350,329 +328,284 @@ const Index = () => {
       getAllOrders();
       getRequestOrders();
       getProfileDetails();
-    }, 600000); // Call every 10 minutes (600000 milliseconds)
-
-    return () => clearInterval(interval); // Cleanup interval on component unmount
+    }, 600000);
+    return () => clearInterval(interval);
   }, []);
 
-  const renderTableRow = ({ item, index }) => (
-    <View>
-      {/* Main Row */}
-      <TouchableOpacity onPress={() => toggleExpandRow(item.id)} style={styles.tableRow}>
-        <Text style={[styles.tableCell, styles.slNumber]}>{index + 1}</Text>
-        <Text style={[styles.tableCell, styles.phone]}>{item.order.user.mobile_number.replace('+91', '')}</Text>
-        <Text style={[styles.tableCell, styles.address]}>{item.order.address.apartment_flat_plot}</Text>
-        {item.order.delivery && item.order.delivery?.delivery_status === 'delivered' ?
-          <View style={styles.deliveredButton}>
-            <Text style={styles.deliveredButtonText}>Delivered</Text>
+  // --- Row renderers (theming only) ---
+  const renderTableRow = ({ item, index }) => {
+    const phone = item?.order?.user?.mobile_number?.replace('+91', '') || '';
+    const address = item?.order?.address?.apartment_flat_plot || '';
+    const deliveredStatus = item?.order?.delivery?.delivery_status === 'delivered';
+
+    return (
+      <View>
+        <View style={styles.cardRow}>
+          <View style={styles.cardRowLeft}>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{index + 1}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.primaryText}>{phone}</Text>
+              <Text style={styles.secondaryText} numberOfLines={1}>{address}</Text>
+            </View>
           </View>
-          :
-          spinner ?
-            <ActivityIndicator size="small" color="#c9170a" />
-            :
-            <TouchableOpacity style={[styles.deliveredButton, { backgroundColor: '#c9170a' }]} onPress={() => openConfirmModal(item.order_id, 'subscription')}>
-              <Text style={styles.deliveredButtonText}>Delivery</Text>
+
+          {deliveredStatus ? (
+            <View style={[styles.actionPill, { backgroundColor: '#CBD5E1' }]}>
+              <Text style={[styles.actionPillText, { color: '#0f172a' }]}>Delivered</Text>
+            </View>
+          ) : spinner ? (
+            <ActivityIndicator size="small" color={ACCENT} />
+          ) : (
+            <TouchableOpacity
+              onPress={() => openConfirmModal(item.order_id, 'subscription')}
+              style={[styles.actionPill, { backgroundColor: ACCENT }]}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.actionPillText}>Delivery</Text>
             </TouchableOpacity>
-        }
-      </TouchableOpacity>
-
-      {/* Collapsible Section */}
-      {expandedRow === item.id && (
-        <View style={styles.collapsibleContent}>
-          <View style={{ width: '100%' }}>
-            <Text style={{ color: '#000', fontSize: 17, fontWeight: '600', marginBottom: 8, textDecorationLine: 'underline' }}>Order Details</Text>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>Order Id:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.order_id}</Text>
-              </View>
-            </View>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>Phone:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.order.user.mobile_number.replace('+91', '')}</Text>
-              </View>
-            </View>
-            <Text style={{ color: '#000', fontSize: 17, fontWeight: '600', marginBottom: 8, textDecorationLine: 'underline' }}>Product Details</Text>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>Name:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.order.flower_product.name}</Text>
-              </View>
-            </View>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>Price:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.order.flower_product.price}</Text>
-              </View>
-            </View>
-            <Text style={{ color: '#000', fontSize: 17, fontWeight: '600', marginBottom: 8, textDecorationLine: 'underline' }}>Address</Text>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>Flat/Plot:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.order.address.apartment_flat_plot}</Text>
-              </View>
-            </View>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>Landmark:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.order.address.landmark}</Text>
-              </View>
-            </View>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>Locality:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.order.address.locality_details.locality_name}</Text>
-              </View>
-            </View>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>City:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.order.address.city}</Text>
-              </View>
-            </View>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>Pincode:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.order.address.pincode}</Text>
-              </View>
-            </View>
-          </View>
+          )}
         </View>
-      )}
-    </View>
-  );
 
-  const renderrequestTableRow = ({ item, index }) => (
-    <View>
-      {/* Main Row */}
-      <TouchableOpacity onPress={() => toggleExpandRow(item.id)} style={styles.tableRow}>
-        <Text style={[styles.tableCell, styles.slNumber]}>{index + 1}</Text>
-        <Text style={[styles.tableCell, styles.phone]}>{item.user.mobile_number.replace('+91', '')}</Text>
-        <Text style={[styles.tableCell, styles.address]}>{item.address.apartment_flat_plot}</Text>
-        {item.delivery_customize_history && item.delivery_customize_history.delivery_status === 'delivered' ?
-          <View style={styles.deliveredButton}>
-            <Text style={styles.deliveredButtonText}>Delivered</Text>
+        {/* Collapsible */}
+        {expandedRow === item.id ? (
+          <View style={styles.collapseCard}>
+            <Text style={styles.sectionTitle}>Order Details</Text>
+            <Row label="Order Id" value={String(item.order_id)} />
+            <Row label="Phone" value={phone} />
+
+            <Text style={styles.sectionTitle}>Product Details</Text>
+            <Row label="Name" value={item?.order?.flower_product?.name} />
+            <Row label="Price" value={String(item?.order?.flower_product?.price ?? '')} />
+
+            <Text style={styles.sectionTitle}>Address</Text>
+            <Row label="Flat/Plot" value={item?.order?.address?.apartment_flat_plot} />
+            <Row label="Landmark" value={item?.order?.address?.landmark} />
+            <Row label="Locality" value={item?.order?.address?.locality_details?.locality_name} />
+            <Row label="City" value={item?.order?.address?.city} />
+            <Row label="Pincode" value={String(item?.order?.address?.pincode ?? '')} />
           </View>
-          :
-          spinner ?
-            <ActivityIndicator size="small" color="#c9170a" />
-            :
-            <TouchableOpacity style={[styles.deliveredButton, { backgroundColor: '#c9170a' }]} onPress={() => openConfirmReqModal(item.order_id, 'request')}>
-              <Text style={styles.deliveredButtonText}>Delivery</Text>
+        ) : null}
+
+        <TouchableOpacity
+          onPress={() => toggleExpandRow(item.id)}
+          activeOpacity={0.7}
+          style={styles.expandBtn}
+        >
+          <Text style={styles.expandText}>
+            {expandedRow === item.id ? 'Hide details' : 'View details'}
+          </Text>
+          <MaterialIcons
+            name={expandedRow === item.id ? 'expand-less' : 'expand-more'}
+            size={18}
+            color="#334155"
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const renderRequestTableRow = ({ item, index }) => {
+    const phone = item?.user?.mobile_number?.replace('+91', '') || '';
+    const address = item?.address?.apartment_flat_plot || '';
+    const deliveredStatus = item?.delivery_customize_history?.delivery_status === 'delivered';
+
+    return (
+      <View>
+        <View style={styles.cardRow}>
+          <View style={styles.cardRowLeft}>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{index + 1}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.primaryText}>{phone}</Text>
+              <Text style={styles.secondaryText} numberOfLines={1}>{address}</Text>
+            </View>
+          </View>
+
+          {deliveredStatus ? (
+            <View style={[styles.actionPill, { backgroundColor: '#CBD5E1' }]}>
+              <Text style={[styles.actionPillText, { color: '#0f172a' }]}>Delivered</Text>
+            </View>
+          ) : spinner ? (
+            <ActivityIndicator size="small" color={ACCENT} />
+          ) : (
+            <TouchableOpacity
+              onPress={() => openConfirmReqModal(item.order_id, 'request')}
+              style={[styles.actionPill, { backgroundColor: ACCENT }]}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.actionPillText}>Delivery</Text>
             </TouchableOpacity>
-        }
-      </TouchableOpacity>
-
-      {/* Collapsible Section */}
-      {expandedRow === item.id && (
-        <View style={styles.collapsibleContent}>
-          <View style={{ width: '100%' }}>
-            <Text style={{ color: '#000', fontSize: 17, fontWeight: '600', marginBottom: 8, textDecorationLine: 'underline' }}>Order Details</Text>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>Order Id:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.order_id}</Text>
-              </View>
-            </View>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>Phone:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.user.mobile_number.replace('+91', '')}</Text>
-              </View>
-            </View>
-            <Text style={{ color: '#000', fontSize: 17, fontWeight: '600', marginBottom: 8, textDecorationLine: 'underline' }}>Product Details</Text>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>Name:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.flower_product.name}</Text>
-              </View>
-            </View>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>Price:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.flower_product.price}</Text>
-              </View>
-            </View>
-            <Text style={{ color: '#000', fontSize: 17, fontWeight: '600', marginBottom: 8, textDecorationLine: 'underline' }}>Address</Text>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>Flat/Plot:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.address.apartment_flat_plot}</Text>
-              </View>
-            </View>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>Landmark:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.address.landmark}</Text>
-              </View>
-            </View>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>Locality:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.address.locality_details.locality_name}</Text>
-              </View>
-            </View>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>City:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.address.city}</Text>
-              </View>
-            </View>
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ width: '40%' }}>
-                <Text style={styles.detailsText}>Pincode:</Text>
-              </View>
-              <View style={{ width: '60%' }}>
-                <Text style={styles.detailsText}>{item.address.pincode}</Text>
-              </View>
-            </View>
-          </View>
+          )}
         </View>
-      )}
+
+        {/* Collapsible */}
+        {expandedRow === item.id ? (
+          <View style={styles.collapseCard}>
+            <Text style={styles.sectionTitle}>Order Details</Text>
+            <Row label="Order Id" value={String(item.order_id)} />
+            <Row label="Phone" value={phone} />
+
+            <Text style={styles.sectionTitle}>Product Details</Text>
+            <Row label="Name" value={item?.flower_product?.name} />
+            <Row label="Price" value={String(item?.flower_product?.price ?? '')} />
+
+            <Text style={styles.sectionTitle}>Address</Text>
+            <Row label="Flat/Plot" value={item?.address?.apartment_flat_plot} />
+            <Row label="Landmark" value={item?.address?.landmark} />
+            <Row label="Locality" value={item?.address?.locality_details?.locality_name} />
+            <Row label="City" value={item?.address?.city} />
+            <Row label="Pincode" value={String(item?.address?.pincode ?? '')} />
+          </View>
+        ) : null}
+
+        <TouchableOpacity
+          onPress={() => toggleExpandRow(item.id)}
+          activeOpacity={0.7}
+          style={styles.expandBtn}
+        >
+          <Text style={styles.expandText}>
+            {expandedRow === item.id ? 'Hide details' : 'View details'}
+          </Text>
+          <MaterialIcons
+            name={expandedRow === item.id ? 'expand-less' : 'expand-more'}
+            size={18}
+            color="#334155"
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const Row = ({ label, value }) => (
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}:</Text>
+      <Text style={styles.detailValue} numberOfLines={1}>{value || '—'}</Text>
     </View>
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, flexDirection: 'column' }}>
-      <View style={{ width: '100%', alignItems: 'center', paddingVertical: 10, backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.8, shadowRadius: 13, elevation: 5 }}>
-        <View style={{ width: '90%', alignSelf: 'center', alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={{ color: '#000', fontSize: 17 }}>Hey, <Text style={{ color: 'red', fontSize: 20, fontWeight: 'bold', textTransform: 'capitalize', textShadowColor: '#000', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}>{profileDetails?.riderDetails?.rider_name}</Text></Text>
+    <SafeAreaView style={styles.screen}>
+      {/* Header */}
+      <LinearGradient colors={BRAND_GRADIENT} style={styles.header}>
+        <View style={styles.headerRowTop}>
+          <Text style={styles.helloText}>
+            Hey, <Text style={styles.helloName}>{profileDetails?.riderDetails?.rider_name || 'Rider'}</Text>
+          </Text>
         </View>
-      </View>
-      <View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-between' }}>
-        <TouchableOpacity
-          style={activeTab === "sub_list" ? styles.activeTabBtm : styles.tabBtm}
-          value="sub_list"
-          onPress={() => setActiveTab('sub_list')}
-        >
-          <Text style={activeTab === "sub_list" ? styles.activeTabBtmText : styles.tabBtmText}>Subscription</Text>
-          {notDeliveredSubCount > 0 &&
-            <View style={{ backgroundColor: '#c9170a', width: 20, height: 20, borderRadius: 50, alignItems: 'center', justifyContent: 'center', marginLeft: 5 }}>
-              <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>{notDeliveredSubCount}</Text>
-            </View>
-          }
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={activeTab === "req_list" ? styles.activeTabBtm : styles.tabBtm}
-          value="req_list"
-          onPress={() => setActiveTab('req_list')}
-        >
-          <Text style={activeTab === "req_list" ? styles.activeTabBtmText : styles.tabBtmText}>Request</Text>
-          {notDeliveredReqCount > 0 &&
-            <View style={{ backgroundColor: '#c9170a', width: 20, height: 20, borderRadius: 50, alignItems: 'center', justifyContent: 'center', marginLeft: 5 }}>
-              <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>{notDeliveredReqCount}</Text>
-            </View>
-          }
-        </TouchableOpacity>
-      </View>
-      {activeTab === "sub_list" ?
-        <View style={{ flex: 1 }}>
-          {!isLoading ?
-            <View style={styles.container}>
-              {/* Table Header */}
-              <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderText, styles.slNumber]}>Sl No</Text>
-                <Text style={[styles.tableCell, styles.phone]}>Phone</Text>
-                <Text style={[styles.tableCell, styles.address]}>Address</Text>
-                <Text style={[styles.tableHeaderText, { flex: 1 }]}>Action</Text>
+
+        <View style={styles.headerStats}>
+          <StatPill
+            icon="truck"
+            text="Subscriptions"
+            count={notDeliveredSubCount}
+            tint="#0EA5E9"
+          />
+          <StatPill
+            icon="box"
+            text="Requests"
+            count={notDeliveredReqCount}
+            tint="#F59E0B"
+          />
+        </View>
+
+        {/* Segmented Tabs */}
+        <View style={styles.tabsWrap}>
+          <TouchableOpacity
+            onPress={() => setActiveTab('sub_list')}
+            style={[styles.tabBtn, activeTab === 'sub_list' && styles.tabBtnActive]}
+            activeOpacity={0.9}
+          >
+            <Text style={[styles.tabText, activeTab === 'sub_list' && styles.tabTextActive]}>
+              Subscription
+            </Text>
+            {notDeliveredSubCount > 0 && (
+              <View style={[styles.counter, activeTab === 'sub_list' && styles.counterActive]}>
+                <Text style={styles.counterText}>{notDeliveredSubCount}</Text>
               </View>
-              {allOrders.length > 0 ?
-                <FlatList
-                  data={allOrders}
-                  // scrollEnabled={true}
-                  renderItem={renderTableRow}
-                  keyExtractor={(item) => item.id.toString()}
-                  refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-                  contentContainerStyle={{ flexGrow: 1 }}
-                />
-                :
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                  {/* <Text style={{ color: '#555', fontSize: 17 }}>No Orders available</Text> */}
-                  <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-                    <TouchableOpacity
-                      onPressIn={handlePressIn}
-                      onPressOut={handlePressOut}
-                      style={styles.pModalCheckCircle}
-                    >
-                      <Text style={styles.buttonText}>Start Delivery</Text>
-                    </TouchableOpacity>
-                  </Animated.View>
-                </View>
-              }
-            </View>
-            :
-            <View style={{ flex: 1, alignSelf: 'center', top: '30%' }}>
-              <Text style={{ color: '#ffcb44', fontSize: 17 }}>Loading...</Text>
-            </View>
-          }
-        </View>
-        :
-        <View style={{ flex: 1 }}>
-          {!isLoading ?
-            <View style={styles.container}>
-              <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderText, styles.slNumber]}>Sl No</Text>
-                <Text style={[styles.tableCell, styles.phone]}>Phone</Text>
-                <Text style={[styles.tableCell, styles.address]}>Address</Text>
-                <Text style={[styles.tableHeaderText, { flex: 1 }]}>Action</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setActiveTab('req_list')}
+            style={[styles.tabBtn, activeTab === 'req_list' && styles.tabBtnActive]}
+            activeOpacity={0.9}
+          >
+            <Text style={[styles.tabText, activeTab === 'req_list' && styles.tabTextActive]}>
+              Request
+            </Text>
+            {notDeliveredReqCount > 0 && (
+              <View style={[styles.counter, activeTab === 'req_list' && styles.counterActive]}>
+                <Text style={styles.counterText}>{notDeliveredReqCount}</Text>
               </View>
-              {requestOrders.length > 0 ?
-                <FlatList
-                  data={requestOrders}
-                  // scrollEnabled={true}
-                  renderItem={renderrequestTableRow}
-                  keyExtractor={(item) => item.id.toString()}
-                  refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-                  contentContainerStyle={{ flexGrow: 1 }}
-                />
-                :
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: '#555', fontSize: 17 }}>No Orders available</Text>
-                </View>
-              }
-            </View>
-            :
-            <View style={{ flex: 1, alignSelf: 'center', top: '30%' }}>
-              <Text style={{ color: '#ffcb44', fontSize: 17 }}>Loading...</Text>
-            </View>
-          }
+            )}
+          </TouchableOpacity>
         </View>
-      }
+      </LinearGradient>
+
+      {/* Content */}
+      {activeTab === 'sub_list' ? (
+        <View style={styles.content}>
+          {isLoading ? (
+            <View style={styles.loaderBox}>
+              <Text style={styles.loaderText}>Loading...</Text>
+            </View>
+          ) : allOrders.length > 0 ? (
+            <>
+              <ListHeader />
+              <FlatList
+                data={allOrders}
+                renderItem={renderTableRow}
+                keyExtractor={(item) => String(item.id)}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                contentContainerStyle={{ paddingBottom: 16 }}
+              />
+            </>
+          ) : (
+            <View style={styles.emptyBox}>
+              <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                <TouchableOpacity
+                  onPressIn={handlePressIn}
+                  onPressOut={handlePressOut}
+                  activeOpacity={0.9}
+                >
+                  <LinearGradient colors={['#F97316', '#EF4444']} style={styles.startBtn}>
+                    <Text style={styles.startText}>Start Delivery</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
+              <Text style={styles.emptyHint}>No assigned subscriptions yet</Text>
+            </View>
+          )}
+        </View>
+      ) : (
+        <View style={styles.content}>
+          {isLoading ? (
+            <View style={styles.loaderBox}>
+              <Text style={styles.loaderText}>Loading...</Text>
+            </View>
+          ) : requestOrders.length > 0 ? (
+            <>
+              <ListHeader />
+              <FlatList
+                data={requestOrders}
+                renderItem={renderRequestTableRow}
+                keyExtractor={(item) => String(item.id)}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                contentContainerStyle={{ paddingBottom: 16 }}
+              />
+            </>
+          ) : (
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyHint}>No requests available</Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Bottom nav (unchanged actions; themed spacing) */}
       <View style={{ padding: 0, height: 58, borderRadius: 0, backgroundColor: '#fff', alignItems: 'center' }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', margin: 0 }}>
           <View style={{ padding: 0, width: '30%' }}>
@@ -702,194 +635,212 @@ const Index = () => {
         </View>
       </View>
 
+      {/* Confirm Delivery Modal — branded theme */}
       <Modal
-        animationType="slide"
-        transparent={true}
+        animationType="fade"
+        transparent
         visible={confirmDeliverModal}
         onRequestClose={closeConfirmDeliverModal}
       >
-        <View style={styles.deleteModalOverlay}>
-          <View style={styles.deleteModalContainer}>
-            <View style={{ width: '90%', alignSelf: 'center', marginBottom: 10 }}>
-              <View style={{ alignItems: 'center' }}>
-                <MaterialIcons name="report-gmailerrorred" size={100} color="red" />
-                <Text style={{ color: '#000', fontSize: 23, fontWeight: 'bold', textAlign: 'center', letterSpacing: 0.3 }}>Are You Sure, You deliver this?</Text>
-                {/* <Text style={{ color: 'gray', fontSize: 17, fontWeight: '500', marginTop: 4 }}>You won't be able to revert this!</Text> */}
-              </View>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <LinearGradient colors={['#F87171', '#DC2626']} style={styles.modalHeader}>
+              <MaterialIcons name="local-shipping" size={28} color="#fff" />
+              <Text style={styles.modalTitle}>Confirm Delivery</Text>
+            </LinearGradient>
+
+            <View style={styles.modalBody}>
+              <Text style={styles.modalQuestion}>
+                Are you sure you delivered this order?
+              </Text>
             </View>
-            <View style={{ width: '95%', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly', marginTop: 10 }}>
-              <TouchableOpacity onPress={closeConfirmDeliverModal} style={styles.cancelDeleteBtn}>
-                <Text style={styles.btnText}>Cancel</Text>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={[styles.modalBtn, styles.modalCancel]} onPress={closeConfirmDeliverModal}>
+                <Text style={[styles.modalBtnText, { color: '#0f172a' }]}>Cancel</Text>
               </TouchableOpacity>
-              {delivery_category === 'subscription' &&
-                <TouchableOpacity onPress={delivered} style={styles.confirmDeleteBtn}>
-                  <Text style={styles.btnText}>Yes</Text>
+
+              {delivery_category === 'subscription' && (
+                <TouchableOpacity style={[styles.modalBtn, styles.modalConfirm]} onPress={delivered}>
+                  <Text style={styles.modalBtnText}>Yes, Deliver</Text>
                 </TouchableOpacity>
-              }
-              {delivery_category === 'request' &&
-                <TouchableOpacity onPress={deliveredReq} style={styles.confirmDeleteBtn}>
-                  <Text style={styles.btnText}>Yes</Text>
+              )}
+              {delivery_category === 'request' && (
+                <TouchableOpacity style={[styles.modalBtn, styles.modalConfirm]} onPress={deliveredReq}>
+                  <Text style={styles.modalBtnText}>Yes, Deliver</Text>
                 </TouchableOpacity>
-              }
+              )}
             </View>
           </View>
         </View>
       </Modal>
     </SafeAreaView>
-  )
-}
+  );
+};
 
-export default Index
+const StatPill = ({ icon, text, count, tint }) => (
+  <View style={styles.statPill}>
+    <View style={[styles.statIcon, { backgroundColor: `${tint}20`, borderColor: `${tint}55` }]}>
+      <FontAwesome5 name={icon} size={14} color={tint} />
+    </View>
+    <View style={{ flex: 1 }}>
+      <Text style={styles.statText}>{text}</Text>
+      <Text style={styles.statCount}>{count}</Text>
+    </View>
+  </View>
+);
 
+const ListHeader = () => (
+  <View style={styles.listHeader}>
+    <Text style={[styles.listHeaderText, { flex: 0.8 }]}>#</Text>
+    <Text style={[styles.listHeaderText, { flex: 2 }]}>Phone</Text>
+    <Text style={[styles.listHeaderText, { flex: 3 }]}>Address</Text>
+    <Text style={[styles.listHeaderText, { flex: 1.5, textAlign: 'right' }]}>Action</Text>
+  </View>
+);
+
+export default Index;
+
+/* ---------------------- STYLES ---------------------- */
 const styles = StyleSheet.create({
-  container: {
+  screen: { flex: 1, backgroundColor: '#F8FAFC' },
+
+  /* Header */
+  header: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 14, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  headerRowTop: { paddingVertical: 8 },
+  helloText: { color: '#E2E8F0', fontSize: 14, fontWeight: '700' },
+  helloName: { color: '#FFFFFF', fontSize: 18, fontWeight: '900', textTransform: 'capitalize' },
+
+  headerStats: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  statPill: {
     flex: 1,
-    padding: 10,
-    // backgroundColor: '#f0ebeb'
-  },
-  tableHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
     padding: 10,
-    backgroundColor: '#e0e0e0',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  tableHeaderText: {
-    textAlign: 'center',
-    fontWeight: 'bold',
-    color: '#000',
+  statIcon: {
+    width: 34, height: 34, borderRadius: 17,
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: 10, borderWidth: 1,
   },
-  pModalCheckCircle: {
-    marginBottom: 20,
-    width: 120,
-    height: 120,
-    borderRadius: 100,
-    backgroundColor: '#c9170a',
+  statText: { color: '#334155', fontWeight: '800', fontSize: 12 },
+  statCount: { color: '#111827', fontWeight: '900', fontSize: 18, marginTop: 2 },
+
+  /* Tabs */
+  tabsWrap: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 999,
+    padding: 4,
+    gap: 6,
+    marginTop: 14,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'transparent',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    width: '90%',
-    alignSelf: 'center',
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  tableRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderColor: '#ddd',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  tabBtnActive: { backgroundColor: '#FFFFFF' },
+  tabText: { color: '#E5E7EB', fontWeight: '800' },
+  tabTextActive: { color: '#0f172a' },
+  counter: {
+    minWidth: 22, height: 22, paddingHorizontal: 6,
+    borderRadius: 11, backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  counterActive: { backgroundColor: '#E2E8F0' },
+  counterText: { color: '#0f172a', fontWeight: '900', fontSize: 12 },
+
+  /* Content area */
+  content: { flex: 1, paddingHorizontal: 12, paddingTop: 12 },
+
+  listHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+  },
+  listHeaderText: { color: '#334155', fontWeight: '900', fontSize: 12 },
+
+  /* Row card */
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 12,
+    marginBottom: 6,
   },
-  tableCell: {
-    textAlign: 'center',
-    color: '#000',
+  cardRowLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  badge: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1, borderColor: '#E2E8F0',
+    alignItems: 'center', justifyContent: 'center',
   },
-  slNumber: {
-    flex: 0.5, // Smaller width for Sl Number
-    textAlign: 'center',
+  badgeText: { color: '#0f172a', fontWeight: '900', fontSize: 12 },
+  primaryText: { color: '#0f172a', fontWeight: '900' },
+  secondaryText: { color: '#64748B', fontWeight: '600', marginTop: 2 },
+
+  actionPill: {
+    height: 36, minWidth: 90, paddingHorizontal: 14,
+    borderRadius: 999, alignItems: 'center', justifyContent: 'center',
   },
-  phone: {
-    flex: 1.5,
-    textAlign: 'center',
+  actionPillText: { color: '#fff', fontWeight: '900' },
+
+  /* Collapse */
+  collapseCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 12,
+    marginTop: 4,
   },
-  address: {
-    flex: 2,
-    textAlign: 'center',
-  },
-  action: {
-    flex: 1,
-    textAlign: 'center',
-  },
-  deliveredButton: {
-    width: 70,
-    height: 35,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#b6b8b6',
-    borderRadius: 5,
-  },
-  deliveredButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  collapsibleContent: {
-    backgroundColor: '#f1f1f1',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderColor: '#ddd',
-  },
-  detailsText: {
-    color: '#000',
-    fontSize: 14,
-  },
-  deleteModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteModalContainer: {
-    width: '85%',
-    backgroundColor: '#fff',
-    borderRadius: 15, // Slightly more rounded corners
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 }, // More pronounced shadow
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-    padding: 20,
-  },
-  cancelDeleteBtn: {
-    backgroundColor: 'red',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 7
-  },
-  btnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600'
-  },
-  confirmDeleteBtn: {
-    backgroundColor: 'green',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 7
-  },
-  activeTabBtm: {
-    width: '49%',
-    marginVertical: 10,
-    alignItems: 'center',
-    borderBottomColor: '#c3272e',
-    borderBottomWidth: 1,
-    marginBottom: 0,
-    padding: 8,
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  tabBtm: {
-    width: '49%',
-    marginVertical: 10,
-    alignItems: 'center',
-    borderBottomColor: '#474747',
-    padding: 8,
-    borderBottomWidth: 0.5,
-    marginBottom: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  tabBtmText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#828282'
-  },
-  activeTabBtmText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#c3272e'
-  },
-})
+  sectionTitle: { color: '#111827', fontWeight: '900', marginTop: 6, marginBottom: 8, textDecorationLine: 'underline' },
+  detailRow: { flexDirection: 'row', marginBottom: 6 },
+  detailLabel: { width: '40%', color: '#334155', fontWeight: '800' },
+  detailValue: { width: '60%', color: '#0f172a', fontWeight: '700' },
+
+  expandBtn: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 6, marginBottom: 8 },
+  expandText: { color: '#334155', fontWeight: '800' },
+
+  /* Empty / loader */
+  loaderBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loaderText: { color: '#FFCB44', fontSize: 16, fontWeight: '800' },
+  emptyBox: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
+  startBtn: { paddingHorizontal: 28, paddingVertical: 14, borderRadius: 999 },
+  startText: { color: '#fff', fontWeight: '900', letterSpacing: 0.3 },
+  emptyHint: { color: '#64748B', fontWeight: '700', marginTop: 10 },
+
+  /* Bottom bar */
+  bottomBar: { paddingTop: 4, height: 62, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#E5E7EB' },
+  bottomItem: { width: '33.33%' },
+  bottomInner: { backgroundColor: '#fff', padding: 10, alignItems: 'center' },
+  bottomText: { color: '#111827', fontSize: 12, fontWeight: '700', marginTop: 2 },
+
+  /* Modal */
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.55)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalCard: { width: '92%', borderRadius: 18, overflow: 'hidden', backgroundColor: '#fff', elevation: 10 },
+  modalHeader: { paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  modalTitle: { color: '#fff', fontWeight: '900', fontSize: 16 },
+  modalBody: { paddingHorizontal: 16, paddingVertical: 16 },
+  modalQuestion: { color: '#0f172a', fontWeight: '800', textAlign: 'center' },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, padding: 12, borderTopWidth: 1, borderTopColor: '#E5E7EB' },
+  modalBtn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10 },
+  modalCancel: { backgroundColor: '#E2E8F0' },
+  modalConfirm: { backgroundColor: ACCENT },
+  modalBtnText: { color: '#fff', fontWeight: '900' },
+});
