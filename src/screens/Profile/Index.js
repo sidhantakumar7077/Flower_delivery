@@ -70,35 +70,30 @@ const Profile = () => {
 
   return (
     <SafeAreaView style={styles.screen}>
-      {/* Header */}
+      {/* Header with Gradient */}
       <LinearGradient colors={BRAND_GRADIENT} style={styles.header}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Feather name="arrow-left" size={22} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Profile</Text>
-          <View style={{ width: 22 }} />{/* spacer to balance back icon */}
+          <Text style={styles.headerTitle}>Profile</Text>
+          <View style={{ width: 22 }} />
         </View>
-        <Text style={styles.headerSub}>Manage your rider details</Text>
       </LinearGradient>
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Card */}
+        {/* Rider Info Card */}
         <View style={styles.profileCard}>
-          <View style={styles.avatarWrap}>
-            <LinearGradient colors={['#94A3B8', '#CBD5E1']} style={styles.avatarRing}>
-              <Image source={avatar} style={styles.avatar} />
-            </LinearGradient>
-          </View>
-
-          <Text style={styles.nameText} numberOfLines={1}>
-            {rider?.rider_name || 'Rider'}
-          </Text>
+          <Image source={avatar} style={styles.avatar} />
+          <Text style={styles.nameText}>{rider?.rider_name || 'Rider'}</Text>
+          {!!rider?.description && (
+            <Text style={styles.descText}>{rider.description}</Text>
+          )}
           {!!rider?.phone_number && (
             <Text style={styles.metaText}>📱 {rider.phone_number}</Text>
           )}
@@ -106,60 +101,49 @@ const Profile = () => {
 
         {/* Stats Row */}
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: '#D1FAE5', borderColor: '#10B981' }]}>
-              <FontAwesome5 name="leaf" color="#10B981" size={14} />
-            </View>
-            <Text style={styles.statCount}>{profileDetails?.totalDeliveries ?? 0}</Text>
-            <Text style={styles.statLabel}>Total Deliveries</Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}>
-              <FontAwesome5 name="calendar-check" color="#F59E0B" size={14} />
-            </View>
-            <Text style={styles.statCount}>{profileDetails?.currentMonthDeliveries ?? 0}</Text>
-            <Text style={styles.statLabel}>This Month</Text>
-          </View>
+          <StatBox
+            icon="box"
+            color="#0EA5E9"
+            count={profileDetails?.totalDeliveries ?? 0}
+            label="Total Deliveries"
+          />
+          <StatBox
+            icon="calendar-check"
+            color="#F59E0B"
+            count={profileDetails?.currentMonthDeliveries ?? 0}
+            label="This Month"
+          />
         </View>
 
-        {/* Info List */}
+        {/* Info Section */}
         <View style={styles.infoList}>
           <InfoRow icon="id-card" title="Rider ID" value={String(rider?.rider_id || '—')} />
-          <InfoRow icon="map-marker-alt" title="Hub / City" value={rider?.city || '—'} />
-          <InfoRow icon="clock" title="Shift" value={rider?.shift || '—'} />
-          {!!rider?.vehicle_number && (
-            <InfoRow icon="motorcycle" title="Vehicle" value={rider.vehicle_number} />
-          )}
+          <InfoRow icon="map-marker-alt" title="City" value={rider?.city || '—'} />
+          <InfoRow icon="clock" title="Status" value={rider?.status || '—'} />
+          <InfoRow icon="calendar" title="Joined" value={new Date(rider?.created_at).toDateString()} />
         </View>
       </ScrollView>
 
-      {/* Footer Navigation (same routes, themed) */}
-      <View style={{ padding: 0, height: 58, borderRadius: 0, backgroundColor: '#fff', alignItems: 'center' }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', margin: 0 }}>
-          <View style={{ padding: 0, width: '30%' }}>
-            <TouchableHighlight onPressIn={() => navigation.navigate('Home')} activeOpacity={0.6} underlayColor="#DDDDDD" style={{ backgroundColor: '#fff', padding: 10, flexDirection: 'column', alignItems: 'center' }}>
-              <View style={{ alignItems: 'center' }}>
-                <MaterialIcons name="delivery-dining" color={'#000'} size={26} />
-                <Text style={{ color: '#000', fontSize: 11, fontWeight: '500', height: 17 }}>Delivery</Text>
-              </View>
-            </TouchableHighlight>
+      {/* Footer Navigation */}
+      <View style={styles.footer}>
+        <TouchableHighlight onPressIn={() => navigation.navigate('Home')} underlayColor="#F1F5F9" style={styles.footerItem}>
+          <View style={{ alignItems: 'center' }}>
+            <MaterialIcons name="delivery-dining" color={'#000'} size={24} />
+            <Text style={styles.footerText}>Delivery</Text>
           </View>
-          <View style={{ padding: 0, width: '30%' }}>
-            <TouchableHighlight onPressIn={() => navigation.navigate('Pickup')} activeOpacity={0.6} underlayColor="#DDDDDD" style={{ backgroundColor: '#fff', padding: 10, flexDirection: 'column', alignItems: 'center' }}>
-              <View style={{ alignItems: 'center' }}>
-                <FontAwesome5 name="truck-pickup" color={'#000'} size={21} />
-                <Text style={{ color: '#000', fontSize: 11, fontWeight: '500', marginTop: 4, height: 17 }}>Pickup</Text>
-              </View>
-            </TouchableHighlight>
+        </TouchableHighlight>
+
+        <TouchableHighlight onPressIn={() => navigation.navigate('Pickup')} underlayColor="#F1F5F9" style={styles.footerItem}>
+          <View style={{ alignItems: 'center' }}>
+            <FontAwesome5 name="truck-pickup" color={'#000'} size={20} />
+            <Text style={styles.footerText}>Pickup</Text>
           </View>
-          <View style={{ padding: 0, width: '30%' }}>
-            <View activeOpacity={0.6} underlayColor="#DDDDDD" style={{ backgroundColor: '#fff', padding: 10, flexDirection: 'column', alignItems: 'center' }}>
-              <View style={{ alignItems: 'center', marginTop: 3 }}>
-                <Fontisto name="person" color={'#dc3545'} size={20} />
-                <Text style={{ color: '#dc3545', fontSize: 11, fontWeight: '500', marginTop: 4, height: 17 }}>Profile</Text>
-              </View>
-            </View>
+        </TouchableHighlight>
+
+        <View style={[styles.footerItem, { borderTopWidth: 2, borderTopColor: ACCENT }]}>
+          <View style={{ alignItems: 'center' }}>
+            <Fontisto name="person" color={ACCENT} size={20} />
+            <Text style={[styles.footerText, { color: ACCENT }]}>Profile</Text>
           </View>
         </View>
       </View>
@@ -167,131 +151,99 @@ const Profile = () => {
   );
 };
 
-/* ---------- small presentational component ---------- */
-const InfoRow = ({ icon, title, value }) => (
-  <View style={styles.infoRow}>
-    <View style={styles.infoLeft}>
-      <View style={styles.infoIcon}>
-        <FontAwesome5 name={icon} size={12} color="#F97316" />
-      </View>
-      <Text style={styles.infoTitle}>{title}</Text>
+/* ---------- Reusable Components ---------- */
+const StatBox = ({ icon, color, count, label }) => (
+  <View style={[styles.statBox, { borderColor: color + '55' }]}>
+    <View style={[styles.statIcon, { backgroundColor: color + '20', borderColor: color + '55' }]}>
+      <FontAwesome5 name={icon} size={14} color={color} />
     </View>
-    <Text style={styles.infoValue} numberOfLines={1}>{value || '—'}</Text>
+    <Text style={[styles.statCount, { color }]}>{count}</Text>
+    <Text style={styles.statLabel}>{label}</Text>
   </View>
 );
 
-export default Profile;
+const InfoRow = ({ icon, title, value }) => (
+  <View style={styles.infoRow}>
+    <View style={styles.infoLeft}>
+      <FontAwesome5 name={icon} size={14} color="#F97316" />
+      <Text style={styles.infoTitle}>{title}</Text>
+    </View>
+    <Text style={styles.infoValue}>{value || '—'}</Text>
+  </View>
+);
 
 /* ---------------------- STYLES ---------------------- */
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F8FAFC' },
 
-  /* Header */
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  header: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerTitle: { color: '#fff', fontWeight: '900', fontSize: 20 },
-  headerSub: { color: '#E2E8F0', marginTop: 8, fontWeight: '600' },
 
-  /* Profile card */
   profileCard: {
+    alignItems: 'center',
     backgroundColor: '#fff',
+    marginTop: -10,
+    marginHorizontal: 16,
+    paddingVertical: 24,
     borderRadius: 20,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    marginTop: -18,
-    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-    alignItems: 'center',
+    elevation: 3,
   },
-  avatarWrap: { marginBottom: 10 },
-  avatarRing: {
-    width: 96, height: 96, borderRadius: 48, padding: 3,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  avatar: { width: 90, height: 90, borderRadius: 45, backgroundColor: '#E5E7EB' },
-  nameText: { color: '#0f172a', fontSize: 20, fontWeight: '900' },
-  metaText: { color: '#64748B', fontWeight: '700', marginTop: 4 },
+  avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 12 },
+  nameText: { fontSize: 20, fontWeight: '900', color: '#0f172a' },
+  descText: { fontSize: 14, color: '#64748B', fontWeight: '600', marginTop: 2, textAlign: 'center' },
+  metaText: { fontSize: 13, color: '#475569', fontWeight: '600', marginTop: 4 },
 
-  /* Stats */
-  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
-  statCard: {
+  statsRow: { flexDirection: 'row', gap: 12, marginTop: 20, marginHorizontal: 16 },
+  statBox: {
     flex: 1,
     backgroundColor: '#fff',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
     paddingVertical: 14,
-    paddingHorizontal: 12,
     alignItems: 'center',
+    borderWidth: 1,
   },
   statIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
   },
-  statCount: { color: '#111827', fontWeight: '900', fontSize: 22 },
-  statLabel: { color: '#334155', fontWeight: '700', marginTop: 2, fontSize: 12, textAlign: 'center' },
+  statCount: { fontSize: 22, fontWeight: '900' },
+  statLabel: { fontSize: 12, fontWeight: '700', color: '#334155', textAlign: 'center' },
 
-  /* Info list */
   infoList: {
     backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 20,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    gap: 6,
+    padding: 10,
   },
   infoRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
+    justifyContent: 'space-between',
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
-  infoLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1.2 },
-  infoIcon: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#FFF7ED',
-    borderWidth: 1,
-    borderColor: '#FED7AA',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoTitle: { color: '#0f172a', fontWeight: '900' },
-  infoValue: { flex: 1, color: '#334155', fontWeight: '700', textAlign: 'right' },
+  infoLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  infoTitle: { fontWeight: '800', color: '#0f172a' },
+  infoValue: { fontWeight: '700', color: '#334155' },
 
-  /* Bottom bar */
-  bottomBar: {
-    paddingTop: 4,
-    height: 62,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  bottomItem: { width: '33.33%' },
-  bottomInner: { backgroundColor: '#fff', padding: 10, alignItems: 'center' },
-  bottomText: { color: '#111827', fontSize: 12, fontWeight: '800', marginTop: 2 },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', height: 60, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#E5E7EB' },
+  footerItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  footerText: { fontSize: 11, fontWeight: '600', marginTop: 4, color: '#111827' },
 });
+
+export default Profile;

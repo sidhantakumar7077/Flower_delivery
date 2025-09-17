@@ -316,33 +316,28 @@ const Index = () => {
       )}
 
       {/* Bottom Bar */}
-      <View style={{ padding: 0, height: 58, borderRadius: 0, backgroundColor: '#fff', alignItems: 'center' }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', margin: 0 }}>
-          <View style={{ padding: 0, width: '30%' }}>
-            <TouchableHighlight onPressIn={() => navigation.navigate('Home')} activeOpacity={0.6} underlayColor="#DDDDDD" style={{ backgroundColor: '#fff', padding: 10, flexDirection: 'column', alignItems: 'center' }}>
-              <View style={{ alignItems: 'center' }}>
-                <MaterialIcons name="delivery-dining" color={'#000'} size={26} />
-                <Text style={{ color: '#000', fontSize: 11, fontWeight: '500', height: 17 }}>Delivery</Text>
-              </View>
-            </TouchableHighlight>
+      {/* Footer Navigation */}
+      <View style={styles.footer}>
+        <TouchableHighlight onPressIn={() => navigation.navigate('Home')} underlayColor="#F1F5F9" style={styles.footerItem}>
+          <View style={{ alignItems: 'center' }}>
+            <MaterialIcons name="delivery-dining" color={'#000'} size={24} />
+            <Text style={styles.footerText}>Delivery</Text>
           </View>
-          <View style={{ padding: 0, width: '30%' }}>
-            <View activeOpacity={0.6} underlayColor="#DDDDDD" style={{ backgroundColor: '#fff', padding: 10, flexDirection: 'column', alignItems: 'center' }}>
-              <View style={{ alignItems: 'center' }}>
-                <FontAwesome5 name="truck-pickup" color={'#dc3545'} size={21} />
-                <Text style={{ color: '#dc3545', fontSize: 11, fontWeight: '500', marginTop: 4, height: 17 }}>Pickup</Text>
-              </View>
-            </View>
-          </View>
-          <View style={{ padding: 0, width: '30%' }}>
-            <TouchableHighlight onPressIn={() => navigation.navigate('Profile')} activeOpacity={0.6} underlayColor="#DDDDDD" style={{ backgroundColor: '#fff', padding: 10, flexDirection: 'column', alignItems: 'center' }}>
-              <View style={{ alignItems: 'center', marginTop: 3 }}>
-                <Fontisto name="person" color={'#000'} size={20} />
-                <Text style={{ color: '#000', fontSize: 11, fontWeight: '500', marginTop: 4, height: 17 }}>Profile</Text>
-              </View>
-            </TouchableHighlight>
+        </TouchableHighlight>
+
+        <View style={[styles.footerItem, { borderTopWidth: 2, borderTopColor: ACCENT }]}>
+          <View style={{ alignItems: 'center' }}>
+            <FontAwesome5 name="truck-pickup" color={ACCENT} size={20} />
+            <Text style={[styles.footerText, { color: ACCENT }]}>Pickup</Text>
           </View>
         </View>
+
+        <TouchableHighlight onPressIn={() => navigation.navigate('Profile')} underlayColor="#F1F5F9" style={styles.footerItem}>
+          <View style={{ alignItems: 'center' }}>
+            <Fontisto name="person" color={'#000'} size={20} />
+            <Text style={styles.footerText}>Profile</Text>
+          </View>
+        </TouchableHighlight>
       </View>
 
       {/* Other Text Modal (themed) */}
@@ -632,4 +627,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     padding: 10,
   },
+  // Footer
+  footer: { flexDirection: 'row', justifyContent: 'space-between', height: 60, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#E5E7EB' },
+  footerItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  footerText: { fontSize: 11, fontWeight: '600', marginTop: 4, color: '#111827' },
 });
