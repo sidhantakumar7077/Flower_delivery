@@ -1,5 +1,4 @@
 import {
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
@@ -420,7 +419,7 @@ const Index = () => {
   const prettyDate = new Date().toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' });
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <View style={styles.screen}>
       {/* ===== HEADER (new look) ===== */}
       <LinearGradient colors={BRAND_GRADIENT} style={styles.header}>
         {/* Decorations */}
@@ -620,7 +619,7 @@ const Index = () => {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 

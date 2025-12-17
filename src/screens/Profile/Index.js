@@ -3,7 +3,6 @@ import {
   StyleSheet,
   Text,
   View,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
   Image,
@@ -69,7 +68,7 @@ const Profile = () => {
     : require('../../assets/images/user.png');
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <View style={styles.screen}>
       {/* Header with Gradient */}
       <LinearGradient colors={BRAND_GRADIENT} style={styles.header}>
         <View style={styles.headerRow}>
@@ -147,7 +146,7 @@ const Profile = () => {
           </View>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 

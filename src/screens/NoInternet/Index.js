@@ -1,4 +1,4 @@
-import { SafeAreaView, StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Modal, Alert, ScrollView, FlatList, TouchableHighlight, RefreshControl } from 'react-native'
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, Modal, Alert, ScrollView, FlatList, TouchableHighlight, RefreshControl } from 'react-native'
 import React, { useEffect, useState } from 'react'
 
 const Index = () => {
@@ -8,7 +8,7 @@ const Index = () => {
     // };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
             <Image
                 style={{ width: 150, height: 150 }}
                 source={require('../../assets/images/no-cooking.png')}
@@ -19,7 +19,7 @@ const Index = () => {
                     <Text style={{ color: '#f51042', fontSize: 18, fontWeight: '500', letterSpacing: 0.4 }}>Try again</Text>
                 </View>
             </View>
-        </SafeAreaView>
+        </View>
     )
 }
 

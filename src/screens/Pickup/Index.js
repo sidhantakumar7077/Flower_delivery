@@ -2,7 +2,6 @@ import {
   StyleSheet,
   Text,
   View,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   TouchableHighlight,
@@ -367,7 +366,7 @@ const Index = () => {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <View style={styles.screen}>
       {/* Header */}
       <LinearGradient colors={BRAND} style={styles.header}>
         <View style={styles.headerRow}>
@@ -589,7 +588,7 @@ const Index = () => {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
