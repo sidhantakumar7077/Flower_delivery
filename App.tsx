@@ -5,6 +5,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from "@react-native-community/netinfo";
 
+import { ensureTrackingPermissions } from './src/location/permissions';
+import {
+  startBackgroundLocation,
+  stopBackgroundLocation,
+  resumeBackgroundLocationIfEnabled,
+} from './src/location/backgroundLocation';
+
 // SplashScreen
 import SplashScreen from './src/screens/SplashScreen/Index'
 
@@ -33,19 +40,20 @@ const App = () => {
   const getAccessToken = async () => {
     try {
       const value = await AsyncStorage.getItem('storeAccesstoken');
-      if (value !== null) {
+      if (value) {
         setAccess_token(value);
-        console.log("access_token", value);
+      } else {
+        setAccess_token('');
       }
     } catch (e) {
-      // error reading value
+      setAccess_token('');
     }
-  }
+  };
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
-      console.log("Connection type", state.type);
-      console.log("Is connected?", state.isConnected);
+      // console.log("Connection type", state.type);
+      // console.log("Is connected?", state.isConnected);
       setIsConnected(state.isConnected ?? false);
     });
     return () => {
@@ -60,6 +68,30 @@ const App = () => {
       setShowSplash(false);
     }, 5000)
   }, []);
+
+  // Start/Stop background location based on login state
+  useEffect(() => {
+    const run = async () => {
+      // If not logged in -> stop tracking (important on logout)
+      if (!access_token) {
+        await stopBackgroundLocation();
+        return;
+      }
+
+      // Logged in -> request permissions and start tracking
+      const perm = await ensureTrackingPermissions();
+      if (!perm.ok) return;
+
+      // Rider id (optional but recommended)
+      const riderId = '1' // ensure you save it on login
+      await startBackgroundLocation({
+        token: access_token,
+        riderId: riderId || '',
+      });
+    };
+
+    run();
+  }, [access_token]);
 
   return (
     <NavigationContainer>
