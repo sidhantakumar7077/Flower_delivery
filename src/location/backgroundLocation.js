@@ -34,20 +34,21 @@ async function postLocation({ token, riderId, coords, timestamp }) {
     return axios.post(
         YOUR_API_URL,
         {
-            riderId,
+            // riderId,
             latitude: coords.latitude,
             longitude: coords.longitude,
-            accuracy: coords.accuracy,
-            speed: coords.speed,
-            heading: coords.heading,
-            altitude: coords.altitude,
-            timestamp,
+            // accuracy: coords.accuracy,
+            // speed: coords.speed,
+            // heading: coords.heading,
+            // altitude: coords.altitude,
+            // timestamp,
         },
         {
             timeout: 20000,
             headers: {
-                Authorization: `Bearer ${token}`,
+                Accept: 'application/json',
                 'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
             },
         },
     );
@@ -86,52 +87,56 @@ const trackingTask = async taskData => {
                 await BackgroundService.stop();
                 return;
             }
-            const auth = JSON.parse(authRaw);
 
+            const auth = JSON.parse(authRaw);
             const pos = await getCurrentPositionOnce();
             const timestamp = pos.timestamp || Date.now();
 
-            // ✅ LOG ONLY (TESTING)
+            // ✅ Debug log (keep for verification)
             console.log(
-                `[BG-LOC] ${new Date(timestamp).toISOString()} lat=${pos.coords.latitude} lng=${pos.coords.longitude} acc=${pos.coords.accuracy}`
+                `[BG-LOC] ${new Date(timestamp).toISOString()} lat=${pos.coords.latitude} lng=${pos.coords.longitude}`,
             );
             // return;
 
-            // ✅ SEND TO SERVER
-            // await postLocation({
-            //     token: auth.token,
-            //     riderId: auth.riderId,
-            //     coords: pos.coords,
-            //     timestamp,
-            // });
+            // ✅ Send to your API (saves to DB on backend)
+            const resp = await postLocation({ token: auth.token, coords: pos.coords });
+
+            // Optional log
+            console.log('[BG-LOC] Sent OK:', resp?.data);
 
             await AsyncStorage.setItem(LAST_SENT_KEY, String(Date.now()));
         } catch (e) {
-            // swallow errors so the loop continues
-            // you can log to your backend if needed
+            // ✅ Log errors so you can see why request failed
+            const msg =
+                e?.response?.data?.message ||
+                e?.response?.data ||
+                e?.message ||
+                'Unknown error';
+            console.log('[BG-LOC] Send failed:', msg);
+
+            // If token expired / unauthorized -> stop tracking
+            if (e?.response?.status === 401) {
+                await stopBackgroundLocation();
+                return;
+            }
         }
 
         await sleep(intervalMs);
     }
 };
 
-export async function startBackgroundLocation({ token, riderId }) {
-    // Persist auth + tracking state so you can resume when app opens again
-    await AsyncStorage.setItem(TRACKING_AUTH_KEY, JSON.stringify({ token, riderId }));
+export async function startBackgroundLocation({ token }) {
+    // Save token for background usage
+    await AsyncStorage.setItem(TRACKING_AUTH_KEY, JSON.stringify({ token }));
     await AsyncStorage.setItem(TRACKING_FLAG_KEY, '1');
 
     const options = {
-        taskName: 'FlowerDeliveryTracking',
-        taskTitle: 'Flower Delivery is tracking location',
-        taskDesc: 'Updating location every 5 minutes',
-        taskIcon: {
-            name: 'ic_launcher',
-            type: 'mipmap',
-        },
-        // This notification is required while running (Android). :contentReference[oaicite:7]{index=7}
-        // linkingURI: 'flowerdelivery://tracking', // optional deep link
+        taskName: 'RiderLocationTracking',
+        taskTitle: 'Tracking location',
+        taskDesc: 'Updating location periodically',
+        taskIcon: { name: 'ic_launcher', type: 'mipmap' },
         parameters: {
-            intervalMs: 5 * 60 * 1000,
+            intervalMs: 60 * 1000, // 1 minute for testing (change to 5 * 60 * 1000 later)
         },
     };
 
@@ -154,7 +159,8 @@ export async function resumeBackgroundLocationIfEnabled() {
     const authRaw = await AsyncStorage.getItem(TRACKING_AUTH_KEY);
     if (!authRaw) return;
 
-    // Start service again only when app is in foreground (Android 12+ restriction). :contentReference[oaicite:8]{index=8}
     const auth = JSON.parse(authRaw);
-    await startBackgroundLocation({ token: auth.token, riderId: auth.riderId });
+    if (!auth?.token) return;
+
+    await startBackgroundLocation({ token: auth.token });
 }

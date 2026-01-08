@@ -82,11 +82,8 @@ const App = () => {
       const perm = await ensureTrackingPermissions();
       if (!perm.ok) return;
 
-      // Rider id (optional but recommended)
-      const riderId = '1' // ensure you save it on login
       await startBackgroundLocation({
-        token: access_token,
-        riderId: riderId || '',
+        token: access_token
       });
     };
 
