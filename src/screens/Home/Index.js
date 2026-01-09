@@ -193,7 +193,7 @@ const Index = () => {
     return new Promise((resolve, reject) => {
       Geolocation.getCurrentPosition(
         (pos) => resolve(pos),
-        (err) => { Alert.alert('Error fetching location', err.message); reject(err); },
+        (err) => { Alert.alert('Something went wrong', err.message); reject(err); },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
       );
     });

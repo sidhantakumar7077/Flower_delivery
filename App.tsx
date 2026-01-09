@@ -9,7 +9,7 @@ import { ensureTrackingPermissions } from './src/location/permissions';
 import {
   startBackgroundLocation,
   stopBackgroundLocation,
-  resumeBackgroundLocationIfEnabled,
+  getRemoteTrackingStatus,
 } from './src/location/backgroundLocation';
 
 // SplashScreen
@@ -42,6 +42,7 @@ const App = () => {
       const value = await AsyncStorage.getItem('storeAccesstoken');
       if (value) {
         setAccess_token(value);
+        console.log("Access token retrieved:", value);
       } else {
         setAccess_token('');
       }
@@ -69,21 +70,22 @@ const App = () => {
     }, 5000)
   }, []);
 
-  // Start/Stop background location based on login state
+  // ✅ Sync background tracking with backend "tracking" switch
   useEffect(() => {
     const run = async () => {
-      // If not logged in -> stop tracking (important on logout)
       if (!access_token) {
-        await stopBackgroundLocation();
+        await stopBackgroundLocation({ clearAuth: true });
         return;
       }
 
-      // Logged in -> request permissions and start tracking
       const perm = await ensureTrackingPermissions();
       if (!perm.ok) return;
 
+      // Start watcher service (it will send only when backend says start)
       await startBackgroundLocation({
-        token: access_token
+        token: access_token,
+        intervalMs: 60 * 1000,     // one location per minute
+        statusPollMs: 15 * 1000,   // check backend start/stop every 15 sec
       });
     };
 

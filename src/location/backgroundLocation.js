@@ -5,11 +5,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { base_url } from '../../App';
 
-const TRACKING_FLAG_KEY = 'FD_TRACKING_ENABLED';
-const TRACKING_AUTH_KEY = 'FD_TRACKING_AUTH'; // store { token, riderId }
+const TRACKING_AUTH_KEY = 'FD_TRACKING_AUTH'; // { token }
 const LAST_SENT_KEY = 'FD_LAST_SENT_TS';
+const SEND_LOCK_KEY = 'FD_LOC_SEND_LOCK'; // prevents parallel sends
 
-const YOUR_API_URL = `${base_url}api/rider/location`; // <-- change
+const LOCATION_POST_URL = `${base_url}api/rider/location`;
+const TRACKING_STATUS_URL = `${base_url}api/rider/tracking`;
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -29,20 +30,27 @@ function getCurrentPositionOnce() {
     });
 }
 
-async function postLocation({ token, riderId, coords, timestamp }) {
-    // You decide your server schema
+export async function getRemoteTrackingStatus(token) {
+    const res = await axios.get(TRACKING_STATUS_URL, {
+        timeout: 20000,
+        headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+    });
+
+    const payload = res?.data;
+    const trackingRaw =
+        payload?.data?.[0]?.tracking ??
+        payload?.data?.tracking ??
+        payload?.tracking ??
+        '';
+
+    const tracking = String(trackingRaw).toLowerCase().trim();
+    return tracking === 'start' || tracking === 'stop' ? tracking : 'stop';
+}
+
+async function postLocation({ token, coords }) {
     return axios.post(
-        YOUR_API_URL,
-        {
-            // riderId,
-            latitude: coords.latitude,
-            longitude: coords.longitude,
-            // accuracy: coords.accuracy,
-            // speed: coords.speed,
-            // heading: coords.heading,
-            // altitude: coords.altitude,
-            // timestamp,
-        },
+        LOCATION_POST_URL,
+        { latitude: coords.latitude, longitude: coords.longitude },
         {
             timeout: 20000,
             headers: {
@@ -54,90 +62,129 @@ async function postLocation({ token, riderId, coords, timestamp }) {
     );
 }
 
-async function shouldSendNow(minIntervalMs) {
+/**
+ * Lock to prevent double-send if the task overlaps/restarts.
+ * TTL avoids deadlock if app crashes mid-send.
+ */
+async function acquireSendLock(ttlMs = 30000) {
+    const now = Date.now();
+    const raw = await AsyncStorage.getItem(SEND_LOCK_KEY);
+    const lockTs = raw ? Number(raw) : 0;
+
+    if (lockTs && now - lockTs < ttlMs) return false;
+
+    await AsyncStorage.setItem(SEND_LOCK_KEY, String(now));
+    return true;
+}
+
+async function releaseSendLock() {
+    await AsyncStorage.removeItem(SEND_LOCK_KEY);
+}
+
+async function getNextSendTime(intervalMs) {
     const last = await AsyncStorage.getItem(LAST_SENT_KEY);
-    if (!last) return true;
-    const lastTs = Number(last);
-    return Number.isFinite(lastTs) ? Date.now() - lastTs >= minIntervalMs : true;
+    const lastTs = last ? Number(last) : 0;
+    if (!lastTs || !Number.isFinite(lastTs)) return Date.now(); // first time: allow immediate
+    return Math.max(Date.now(), lastTs + intervalMs);
 }
 
 const trackingTask = async taskData => {
-    const { intervalMs } = taskData;
+    const intervalMs = Number(taskData?.intervalMs ?? 60 * 1000);     // send location every 1 min
+    const statusPollMs = Number(taskData?.statusPollMs ?? 15 * 1000); // check switch every 15 sec
 
-    // Keep running until stop() is called
+    let remoteStatus = 'stop';
+    let nextStatusAt = 0;
+    let nextSendAt = await getNextSendTime(intervalMs);
+
     while (BackgroundService.isRunning()) {
         try {
-            // Optional: enforce a minimum interval even if loop is restarted
-            const okToSend = await shouldSendNow(intervalMs);
-            if (!okToSend) {
-                await sleep(1000);
-                continue;
-            }
-
-            const net = await NetInfo.fetch();
-            if (!net.isConnected) {
-                // No internet: wait and retry next cycle
-                await sleep(intervalMs);
-                continue;
-            }
-
             const authRaw = await AsyncStorage.getItem(TRACKING_AUTH_KEY);
             if (!authRaw) {
-                // Not logged in / no token: stop tracking
                 await BackgroundService.stop();
                 return;
             }
 
-            const auth = JSON.parse(authRaw);
-            const pos = await getCurrentPositionOnce();
-            const timestamp = pos.timestamp || Date.now();
-
-            // ✅ Debug log (keep for verification)
-            console.log(
-                `[BG-LOC] ${new Date(timestamp).toISOString()} lat=${pos.coords.latitude} lng=${pos.coords.longitude}`,
-            );
-            // return;
-
-            // ✅ Send to your API (saves to DB on backend)
-            const resp = await postLocation({ token: auth.token, coords: pos.coords });
-
-            // Optional log
-            console.log('[BG-LOC] Sent OK:', resp?.data);
-
-            await AsyncStorage.setItem(LAST_SENT_KEY, String(Date.now()));
-        } catch (e) {
-            // ✅ Log errors so you can see why request failed
-            const msg =
-                e?.response?.data?.message ||
-                e?.response?.data ||
-                e?.message ||
-                'Unknown error';
-            console.log('[BG-LOC] Send failed:', msg);
-
-            // If token expired / unauthorized -> stop tracking
-            if (e?.response?.status === 401) {
-                await stopBackgroundLocation();
+            const { token } = JSON.parse(authRaw);
+            if (!token) {
+                await BackgroundService.stop();
                 return;
             }
-        }
 
-        await sleep(intervalMs);
+            const now = Date.now();
+
+            // 1) Poll backend switch on schedule
+            if (now >= nextStatusAt) {
+                try {
+                    remoteStatus = await getRemoteTrackingStatus(token);
+                } catch {
+                    // if tracking API fails temporarily, keep last known state (safer)
+                }
+                nextStatusAt = now + statusPollMs;
+            }
+
+            // 2) If backend says START and time reached -> send one location
+            if (remoteStatus === 'start' && now >= nextSendAt) {
+                const net = await NetInfo.fetch();
+                if (net.isConnected) {
+                    const locked = await acquireSendLock(30000);
+                    if (locked) {
+                        try {
+                            const pos = await getCurrentPositionOnce();
+
+                            // Send
+                            await postLocation({ token, coords: pos.coords });
+
+                            // Update last sent AFTER success
+                            await AsyncStorage.setItem(LAST_SENT_KEY, String(Date.now()));
+
+                            // Compute next send strictly +interval
+                            nextSendAt = (await getNextSendTime(intervalMs));
+                        } finally {
+                            await releaseSendLock();
+                        }
+                    }
+                } else {
+                    // no internet, try again next interval
+                    nextSendAt = now + intervalMs;
+                }
+            }
+
+            // 3) Sleep until next scheduled event
+            const nextWake = remoteStatus === 'start'
+                ? Math.min(nextStatusAt, nextSendAt)
+                : nextStatusAt;
+
+            const sleepFor = Math.max(1000, nextWake - Date.now());
+            await sleep(sleepFor);
+
+        } catch (e) {
+            // Token expired / unauthorized => stop completely
+            if (e?.response?.status === 401) {
+                await stopBackgroundLocation({ clearAuth: true });
+                return;
+            }
+            await sleep(2000);
+        }
     }
 };
 
-export async function startBackgroundLocation({ token }) {
-    // Save token for background usage
+export async function startBackgroundLocation({
+    token,
+    intervalMs = 60 * 1000,
+    statusPollMs = 15 * 1000,
+}) {
     await AsyncStorage.setItem(TRACKING_AUTH_KEY, JSON.stringify({ token }));
-    await AsyncStorage.setItem(TRACKING_FLAG_KEY, '1');
 
     const options = {
-        taskName: 'RiderLocationTracking',
-        taskTitle: 'Tracking location',
-        taskDesc: 'Updating location periodically',
+        taskName: 'RiderTrackingWatcher',
+        taskTitle: 'Rider tracking service',
+        taskDesc: 'Listening for tracking start/stop',
         taskIcon: { name: 'ic_launcher', type: 'mipmap' },
-        parameters: {
-            intervalMs: 60 * 1000, // 1 minute for testing (change to 5 * 60 * 1000 later)
-        },
+
+        // IMPORTANT: keeps service when app is swiped away (if supported by your version)
+        // stopWithTask: false,
+
+        parameters: { intervalMs, statusPollMs },
     };
 
     if (!BackgroundService.isRunning()) {
@@ -145,22 +192,14 @@ export async function startBackgroundLocation({ token }) {
     }
 }
 
-export async function stopBackgroundLocation() {
-    await AsyncStorage.multiRemove([TRACKING_FLAG_KEY, TRACKING_AUTH_KEY, LAST_SENT_KEY]);
+export async function stopBackgroundLocation({ clearAuth = true } = {}) {
+    await AsyncStorage.multiRemove([LAST_SENT_KEY, SEND_LOCK_KEY]);
+
+    if (clearAuth) {
+        await AsyncStorage.removeItem(TRACKING_AUTH_KEY);
+    }
+
     if (BackgroundService.isRunning()) {
         await BackgroundService.stop();
     }
-}
-
-export async function resumeBackgroundLocationIfEnabled() {
-    const enabled = await AsyncStorage.getItem(TRACKING_FLAG_KEY);
-    if (enabled !== '1') return;
-
-    const authRaw = await AsyncStorage.getItem(TRACKING_AUTH_KEY);
-    if (!authRaw) return;
-
-    const auth = JSON.parse(authRaw);
-    if (!auth?.token) return;
-
-    await startBackgroundLocation({ token: auth.token });
 }
